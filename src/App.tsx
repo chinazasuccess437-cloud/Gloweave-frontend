@@ -6,6 +6,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { HomeDashboard } from './components/HomeDashboard';
 import {
+  DeleteAccountConfirmModal,
+  SignOutConfirmModal,
   SolutionDetailModal,
   SubmitKind,
   SubmitResourceModal,
@@ -32,6 +34,11 @@ import {
   REGION_INSIGHTS,
 } from './data/gloweaveData';
 import {
+  DEFAULT_USER_PREFERENCES,
+  loadUserPreferences,
+  saveUserPreferences,
+} from './data/legalDocuments';
+import {
   clearOnboardingDraft,
   createInitialDraft,
   loadOnboardingDraft,
@@ -40,10 +47,12 @@ import {
 import {
   fetchUserProfile,
   PersistedUserProfile,
+  requestAccountDeletion,
   supabase,
 } from './lib/supabase';
 import {
   ContributorItem,
+  LegalDocumentId,
   MatchItem,
   MessageThread,
   NavView,
@@ -53,8 +62,11 @@ import {
   RegionFilter,
   ResourceKind,
   ResourceSubmission,
+  SettingsTabId,
   SolutionItem,
   StartupItem,
+  SupportTabId,
+  UserSettingsPreferences,
 } from './types/gloweave';
 
 export default function App() {
@@ -78,7 +90,15 @@ export default function App() {
   const [profileRole, setProfileRole] = useState('');
   const [profileLocation, setProfileLocation] = useState('');
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
-  const [emailDigest, setEmailDigest] = useState(true);
+  const [preferences, setPreferences] = useState<UserSettingsPreferences>(() =>
+    loadUserPreferences()
+  );
+  const [emailDigest, setEmailDigest] = useState<boolean>(
+    () => loadUserPreferences().notifications.weeklyDigest
+  );
+  const [settingsTab, setSettingsTab] = useState<SettingsTabId>('account');
+  const [legalDocId, setLegalDocId] = useState<LegalDocumentId>('privacy');
+  const [supportTab, setSupportTab] = useState<SupportTabId>('help-center');
 
   const [submitModalOpen, setSubmitModalOpen] = useState(false);
   const [submitKind, setSubmitKind] = useState<SubmitKind>('resource');
@@ -86,6 +106,10 @@ export default function App() {
   const [prefillSubmitUrl, setPrefillSubmitUrl] = useState('');
 
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [signOutConfirmOpen, setSignOutConfirmOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [accountActionBusy, setAccountActionBusy] = useState(false);
+
   const [activeProblemId, setActiveProblemId] = useState<string | null>(null);
   const [selectedSolution, setSelectedSolution] = useState<SolutionItem | null>(null);
   const [activeThreadId, setActiveThreadId] = useState<string>(INITIAL_MESSAGES[0]?.id || '');
@@ -206,6 +230,47 @@ export default function App() {
     setDraft(loadOnboardingDraft());
     setActiveView('home');
     showToast(authenticatedUser ? 'Signed out of Gloweave.' : 'Returned to onboarding.');
+  };
+
+  const handleConfirmSignOut = async () => {
+    setAccountActionBusy(true);
+    try {
+      await handleSignOut();
+      setSignOutConfirmOpen(false);
+    } finally {
+      setAccountActionBusy(false);
+    }
+  };
+
+  const handleConfirmDeleteAccount = async () => {
+    setAccountActionBusy(true);
+    try {
+      const result = await requestAccountDeletion();
+      try {
+        window.localStorage.removeItem('gloweave_user_preferences_v1');
+      } catch {
+        // ignore storage errors
+      }
+      clearOnboardingDraft();
+      setDraft(createInitialDraft());
+      setPreferences(DEFAULT_USER_PREFERENCES);
+      setEmailDigest(DEFAULT_USER_PREFERENCES.notifications.weeklyDigest);
+      setProfileName('');
+      setProfileRole('');
+      setProfileLocation('');
+      setProfilePhotoUrl(null);
+      setIsPro(false);
+      setProblems((prev) => prev.map((p) => ({ ...p, bookmarked: false })));
+      setSolutions((prev) => prev.map((s) => ({ ...s, bookmarked: false })));
+      setMatches((prev) => prev.map((m) => ({ ...m, bookmarked: false })));
+      setAuthenticatedUser(null);
+      setGuestPreviewMode(false);
+      setActiveView('home');
+      setDeleteConfirmOpen(false);
+      showToast(result.message);
+    } finally {
+      setAccountActionBusy(false);
+    }
   };
 
   const unreadMessagesCount = useMemo(
@@ -538,7 +603,26 @@ export default function App() {
     if (updates.name !== undefined) setProfileName(updates.name);
     if (updates.role !== undefined) setProfileRole(updates.role);
     if (updates.location !== undefined) setProfileLocation(updates.location);
-    if (updates.emailDigest !== undefined) setEmailDigest(updates.emailDigest);
+    if (updates.emailDigest !== undefined) {
+      setEmailDigest(updates.emailDigest);
+      setPreferences((prev) => {
+        const next: UserSettingsPreferences = {
+          ...prev,
+          notifications: {
+            ...prev.notifications,
+            weeklyDigest: updates.emailDigest ?? prev.notifications.weeklyDigest,
+          },
+        };
+        saveUserPreferences(next);
+        return next;
+      });
+    }
+  };
+
+  const handleUpdatePreferences = (next: UserSettingsPreferences) => {
+    setPreferences(next);
+    setEmailDigest(next.notifications.weeklyDigest);
+    saveUserPreferences(next);
   };
 
   const handleUploadPhoto = (dataUrl: string) => {
@@ -598,7 +682,7 @@ export default function App() {
           profileName={profileName}
           profilePhotoUrl={profilePhotoUrl}
           onOpenUpgrade={() => setUpgradeModalOpen(true)}
-          onSignOut={handleSignOut}
+          onSignOut={() => setSignOutConfirmOpen(true)}
         />
 
         <main className="md:ml-64 flex-1 p-4 md:p-6 pb-24 md:pb-8 space-y-6 max-w-[1440px]">
@@ -648,12 +732,23 @@ export default function App() {
               notifications={notifications}
               activeProblemDetail={activeProblemDetail}
               activeThreadId={activeThreadId}
+              authenticatedUser={authenticatedUser}
               isPro={isPro}
               profileName={profileName}
               profileRole={profileRole}
               profileLocation={profileLocation}
               profilePhotoUrl={profilePhotoUrl}
               emailDigest={emailDigest}
+              preferences={preferences}
+              settingsTab={settingsTab}
+              legalDocId={legalDocId}
+              supportTab={supportTab}
+              onSelectSettingsTab={setSettingsTab}
+              onSelectLegalDoc={setLegalDocId}
+              onSelectSupportTab={setSupportTab}
+              onUpdatePreferences={handleUpdatePreferences}
+              onRequestSignOut={() => setSignOutConfirmOpen(true)}
+              onRequestDeleteAccount={() => setDeleteConfirmOpen(true)}
               onSelectView={navigateTo}
               onBackFromProblem={() =>
                 setActiveView(previousView === 'problem-detail' ? 'discover' : previousView)
@@ -702,7 +797,7 @@ export default function App() {
         profilePhotoUrl={profilePhotoUrl}
         onOpenSubmit={() => handleOpenSubmit({ kind: 'resource' })}
         onOpenUpgrade={() => setUpgradeModalOpen(true)}
-        onSignOut={handleSignOut}
+        onSignOut={() => setSignOutConfirmOpen(true)}
       />
 
       {/* Modals */}
@@ -737,6 +832,22 @@ export default function App() {
         onClose={() => setSelectedSolution(null)}
         onToggleBookmark={handleToggleSolutionBookmark}
         onOpenProblem={handleOpenProblemDetail}
+      />
+
+      <SignOutConfirmModal
+        open={signOutConfirmOpen}
+        isAuthenticated={Boolean(authenticatedUser)}
+        busy={accountActionBusy}
+        onCancel={() => setSignOutConfirmOpen(false)}
+        onConfirm={handleConfirmSignOut}
+      />
+
+      <DeleteAccountConfirmModal
+        open={deleteConfirmOpen}
+        isAuthenticated={Boolean(authenticatedUser)}
+        busy={accountActionBusy}
+        onCancel={() => setDeleteConfirmOpen(false)}
+        onConfirm={handleConfirmDeleteAccount}
       />
 
       {/* Non-blocking Toast */}

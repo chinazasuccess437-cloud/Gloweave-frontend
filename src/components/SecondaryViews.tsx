@@ -9,13 +9,16 @@ import {
   Crown,
   ExternalLink,
   Globe,
+  LifeBuoy,
   Lightbulb,
   Link2,
   MessageSquare,
   Network,
   Plus,
   Rocket,
+  Scale,
   Send,
+  Settings,
   Sparkles,
   Star,
   ThumbsUp,
@@ -25,6 +28,7 @@ import { CATEGORIES } from '../data/gloweaveData';
 import { CONTINENTS } from '../data/countries';
 import {
   ContributorItem,
+  LegalDocumentId,
   MatchItem,
   MessageThread,
   NavView,
@@ -34,17 +38,23 @@ import {
   RegionFilter,
   RegionInsight,
   ResourceSubmission,
+  SettingsTabId,
   SolutionItem,
   SolutionStatus,
   StartupItem,
+  SupportTabId,
+  UserSettingsPreferences,
 } from '../types/gloweave';
 import { CountrySelector } from './CountrySelector';
+import { LegalDocumentView } from './LegalDocumentView';
 import { MatchesView } from './MatchesView';
 import {
   ProblemDetailView,
   problemSolutionStatusBadge,
   solutionStatusBadge,
 } from './ProblemDetailView';
+import { SettingsView } from './SettingsView';
+import { SupportView } from './SupportView';
 import {
   AvatarBadge,
   DottedWorldMap,
@@ -68,12 +78,23 @@ interface SecondaryViewsProps {
   notifications: NotificationItem[];
   activeProblemDetail: ProblemItem | null;
   activeThreadId: string;
+  authenticatedUser: { id: string; email: string } | null;
   isPro: boolean;
   profileName: string;
   profileRole: string;
   profileLocation: string;
   profilePhotoUrl: string | null;
   emailDigest: boolean;
+  preferences: UserSettingsPreferences;
+  settingsTab: SettingsTabId;
+  legalDocId: LegalDocumentId;
+  supportTab: SupportTabId;
+  onSelectSettingsTab: (tab: SettingsTabId) => void;
+  onSelectLegalDoc: (docId: LegalDocumentId) => void;
+  onSelectSupportTab: (tab: SupportTabId) => void;
+  onUpdatePreferences: (next: UserSettingsPreferences) => void;
+  onRequestSignOut: () => void;
+  onRequestDeleteAccount: () => void;
   onSelectView: (view: NavView) => void;
   onBackFromProblem: () => void;
   onOpenSubmit: (opts?: { kind?: 'resource' | 'evidence'; problemId?: string }) => void;
@@ -117,12 +138,23 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
   notifications,
   activeProblemDetail,
   activeThreadId,
+  authenticatedUser,
   isPro,
   profileName,
   profileRole,
   profileLocation,
   profilePhotoUrl,
   emailDigest,
+  preferences,
+  settingsTab,
+  legalDocId,
+  supportTab,
+  onSelectSettingsTab,
+  onSelectLegalDoc,
+  onSelectSupportTab,
+  onUpdatePreferences,
+  onRequestSignOut,
+  onRequestDeleteAccount,
   onSelectView,
   onBackFromProblem,
   onOpenSubmit,
@@ -291,6 +323,76 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
         onToggleMatchBookmark={onToggleMatchBookmark}
         onToggleConnect={onToggleConnect}
         onStartMessageWith={onStartMessageWith}
+      />
+    );
+  }
+
+  // =========================================================
+  // 1C. SETTINGS, SUPPORT & LEGAL SCREENS
+  // =========================================================
+  if (activeView === 'settings') {
+    return (
+      <SettingsView
+        activeTab={settingsTab}
+        onSelectTab={onSelectSettingsTab}
+        authenticatedUser={authenticatedUser}
+        isPro={isPro}
+        profileName={profileName}
+        profileRole={profileRole}
+        profileLocation={profileLocation}
+        profilePhotoUrl={profilePhotoUrl}
+        preferences={preferences}
+        savedProblems={problems.filter((p) => p.bookmarked)}
+        savedSolutions={solutions.filter((s) => s.bookmarked)}
+        savedMatches={matches.filter((m) => m.bookmarked)}
+        onUpdateProfile={onUpdateProfile}
+        onUploadPhoto={onUploadPhoto}
+        onRemovePhoto={onRemovePhoto}
+        onUpdatePreferences={onUpdatePreferences}
+        onOpenUpgrade={onOpenUpgrade}
+        onOpenSupport={(subTab) => {
+          if (subTab) onSelectSupportTab(subTab);
+          onSelectView('support');
+        }}
+        onOpenLegal={(docId) => {
+          if (docId) onSelectLegalDoc(docId);
+          onSelectView('legal');
+        }}
+        onSelectProblem={onSelectProblem}
+        onSelectSolution={onSelectSolution}
+        onToggleProblemBookmark={onToggleProblemBookmark}
+        onToggleSolutionBookmark={onToggleSolutionBookmark}
+        onToggleMatchBookmark={onToggleMatchBookmark}
+        onRequestSignOut={onRequestSignOut}
+        onRequestDeleteAccount={onRequestDeleteAccount}
+        onToast={onToast}
+      />
+    );
+  }
+
+  if (activeView === 'legal') {
+    return (
+      <LegalDocumentView
+        activeDocId={legalDocId}
+        onSelectDoc={onSelectLegalDoc}
+        onBack={() => onSelectView('settings')}
+        backLabel="Back to Settings"
+      />
+    );
+  }
+
+  if (activeView === 'support') {
+    return (
+      <SupportView
+        activeTab={supportTab}
+        onSelectTab={onSelectSupportTab}
+        userEmail={authenticatedUser?.email}
+        onBack={() => onSelectView('settings')}
+        onOpenLegal={(docId) => {
+          onSelectLegalDoc(docId);
+          onSelectView('legal');
+        }}
+        onToast={onToast}
       />
     );
   }
@@ -1917,14 +2019,43 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onOpenUpgrade}
-          className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] text-slate-950 font-extrabold text-xs flex items-center space-x-1.5 self-start cursor-pointer"
-        >
-          <Crown className="w-3.5 h-3.5" />
-          <span>{isPro ? 'Manage Pro Access' : 'Upgrade to Pro'}</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2 self-start">
+          <button
+            type="button"
+            onClick={() => {
+              onSelectSettingsTab('account');
+              onSelectView('settings');
+            }}
+            className="px-3.5 py-2.5 rounded-xl bg-[#0A1633] border border-[#1E386E] text-xs font-semibold text-slate-200 hover:border-sky-400/50 flex items-center space-x-1.5 cursor-pointer"
+          >
+            <Settings className="w-3.5 h-3.5 text-[#38BDF8]" />
+            <span>Settings</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onSelectView('support')}
+            className="px-3.5 py-2.5 rounded-xl bg-[#0A1633] border border-[#1E386E] text-xs font-semibold text-slate-200 hover:border-sky-400/50 flex items-center space-x-1.5 cursor-pointer"
+          >
+            <LifeBuoy className="w-3.5 h-3.5 text-[#38BDF8]" />
+            <span>Support</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onSelectView('legal')}
+            className="px-3.5 py-2.5 rounded-xl bg-[#0A1633] border border-[#1E386E] text-xs font-semibold text-slate-200 hover:border-sky-400/50 flex items-center space-x-1.5 cursor-pointer"
+          >
+            <Scale className="w-3.5 h-3.5 text-[#38BDF8]" />
+            <span>Legal</span>
+          </button>
+          <button
+            type="button"
+            onClick={onOpenUpgrade}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] text-slate-950 font-extrabold text-xs flex items-center space-x-1.5 cursor-pointer"
+          >
+            <Crown className="w-3.5 h-3.5" />
+            <span>{isPro ? 'Manage Pro Access' : 'Upgrade to Pro'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Profile Sub-Navigation */}

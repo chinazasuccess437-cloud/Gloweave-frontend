@@ -12,7 +12,42 @@ export type NavView =
   | 'community'
   | 'messages'
   | 'notifications'
-  | 'profile';
+  | 'profile'
+  | 'settings'
+  | 'legal'
+  | 'support';
+
+export type LegalDocumentId = 'privacy' | 'terms' | 'guidelines' | 'data-ai';
+
+export type SupportTabId = 'help-center' | 'faq' | 'contact' | 'report' | 'about';
+
+export type SettingsTabId =
+  | 'account'
+  | 'profile'
+  | 'email'
+  | 'password'
+  | 'notifications'
+  | 'privacy'
+  | 'language'
+  | 'saved'
+  | 'support'
+  | 'legal';
+
+export interface UserSettingsPreferences {
+  notifications: {
+    batchUpdates: boolean;
+    solutionVerification: boolean;
+    matchAlerts: boolean;
+    weeklyDigest: boolean;
+  };
+  privacy: {
+    profileVisibility: 'community' | 'private';
+    showCountry: boolean;
+    allowDirectMessages: boolean;
+    publicSubmissionAttribution: boolean;
+  };
+  language: string;
+}
 
 export type RegionFilter =
   | 'Global'

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  AlertTriangle,
   ArrowLeft,
   Check,
   CheckCircle2,
@@ -9,9 +10,11 @@ import {
   Globe,
   Link2,
   Loader2,
+  LogOut,
   Rocket,
   Sparkles,
   Star,
+  Trash2,
   Users,
   X,
 } from 'lucide-react';
@@ -800,3 +803,189 @@ export const SolutionDetailModal: React.FC<SolutionDetailModalProps> = ({
     </div>
   );
 };
+
+interface SignOutConfirmModalProps {
+  open: boolean;
+  isAuthenticated: boolean;
+  busy?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}
+
+export const SignOutConfirmModal: React.FC<SignOutConfirmModalProps> = ({
+  open,
+  isAuthenticated,
+  busy = false,
+  onCancel,
+  onConfirm,
+}) => {
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4"
+      onClick={onCancel}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Confirm sign out"
+    >
+      <div
+        className="w-full max-w-md glass-card rounded-3xl p-6 space-y-5 border border-sky-400/30"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-400/35 text-[#38BDF8] flex items-center justify-center shrink-0">
+              <LogOut className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-white">
+                {isAuthenticated ? 'Sign Out of Gloweave?' : 'Return to Onboarding?'}
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">Confirmation required</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Close sign out confirmation"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <p className="text-xs text-slate-300 leading-relaxed">
+          {isAuthenticated
+            ? 'You will be signed out of your authenticated session on this device. You can sign back in anytime with your email and password.'
+            : 'You will return to the Gloweave welcome and registration flow.'}
+        </p>
+
+        <div className="flex items-center justify-end gap-2.5 pt-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            className="px-4 py-2 rounded-xl bg-[#0A1633] border border-[#1E386E] text-xs font-semibold text-slate-200 cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            className="px-5 py-2 rounded-xl btn-royal text-white text-xs font-bold flex items-center space-x-1.5 cursor-pointer disabled:opacity-60"
+          >
+            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            <span>{isAuthenticated ? 'Confirm Sign Out' : 'Continue'}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface DeleteAccountConfirmModalProps {
+  open: boolean;
+  isAuthenticated: boolean;
+  busy?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}
+
+export const DeleteAccountConfirmModal: React.FC<DeleteAccountConfirmModalProps> = ({
+  open,
+  isAuthenticated,
+  busy = false,
+  onCancel,
+  onConfirm,
+}) => {
+  const [confirmWord, setConfirmWord] = useState('');
+
+  useEffect(() => {
+    if (open) setConfirmWord('');
+  }, [open]);
+
+  if (!open) return null;
+
+  const canDelete = confirmWord.trim().toUpperCase() === 'DELETE';
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4"
+      onClick={onCancel}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Confirm account deletion"
+    >
+      <div
+        className="w-full max-w-md glass-card rounded-3xl p-6 space-y-5 border border-rose-500/40"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-400/40 text-rose-400 flex items-center justify-center shrink-0">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-white">Delete Account</h3>
+              <p className="text-xs text-rose-300 mt-0.5">Permanent action confirmation</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Close delete account confirmation"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-400/35 text-[11px] text-amber-100 flex items-start space-x-2.5 leading-relaxed">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div>
+            <strong className="text-amber-300">Backend Deletion Notice:</strong>{' '}
+            {isAuthenticated
+              ? 'Permanent server-side deletion of Supabase Auth records awaits a dedicated backend deletion endpoint. Confirming here will clear your local preferences, draft state, and sign you out.'
+              : 'This will clear all local session data, saved preferences, and onboarding progress from this browser.'}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            Type <code className="text-rose-300 font-bold">DELETE</code> to confirm
+          </label>
+          <input
+            type="text"
+            value={confirmWord}
+            onChange={(e) => setConfirmWord(e.target.value)}
+            placeholder="DELETE"
+            className="w-full bg-[#040A1A] border border-rose-500/35 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-rose-400"
+          />
+        </div>
+
+        <div className="flex items-center justify-end gap-2.5 pt-1">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            className="px-4 py-2 rounded-xl bg-[#0A1633] border border-[#1E386E] text-xs font-semibold text-slate-200 cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={!canDelete || busy}
+            className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center space-x-1.5 cursor-pointer disabled:opacity-45"
+          >
+            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            <span>Clear &amp; Confirm</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+

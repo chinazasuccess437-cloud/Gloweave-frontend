@@ -30,8 +30,14 @@ import {
   supabase,
   verifyEmailToken,
 } from '../../lib/supabase';
-import { OnboardingAnswers, OnboardingDraft, OnboardingPhase } from '../../types/gloweave';
+import {
+  LegalDocumentId,
+  OnboardingAnswers,
+  OnboardingDraft,
+  OnboardingPhase,
+} from '../../types/gloweave';
 import { CountrySelector } from '../CountrySelector';
+import { LegalDocumentModal } from '../LegalDocumentView';
 import { HeroGlobeGraphic } from '../VisualThumbnails';
 import {
   OnboardingProgressBar,
@@ -73,6 +79,16 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   // Returning user sign-in fields
   const [signInEmail, setSignInEmail] = useState('');
   const [signInPassword, setSignInPassword] = useState('');
+
+  // Pre-registration legal document access
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalDocId, setLegalDocId] = useState<LegalDocumentId>('privacy');
+  const [acceptedPolicies, setAcceptedPolicies] = useState(false);
+
+  const openLegal = (docId: LegalDocumentId) => {
+    setLegalDocId(docId);
+    setLegalModalOpen(true);
+  };
 
   const { phase, step, answers, email, verificationEmailSent } = draft;
 
@@ -147,6 +163,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       ? answers.otherRole.trim()
       : answers.role;
 
+  const renderPhase = () => {
   // =========================================================
   // PHASE 1: WELCOME
   // =========================================================
@@ -154,6 +171,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     return (
       <OnboardingShell
         maxWidthClass="max-w-4xl"
+        onOpenLegal={openLegal}
         headerRight={
           <div className="flex items-center gap-2">
             <button
@@ -232,6 +250,38 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 Already registered? Sign In
               </button>
             </div>
+
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400 pt-1">
+              <span>Review policies before registering:</span>
+              <button
+                type="button"
+                onClick={() => openLegal('privacy')}
+                className="text-[#38BDF8] hover:underline font-medium cursor-pointer"
+              >
+                Privacy Policy
+              </button>
+              <button
+                type="button"
+                onClick={() => openLegal('terms')}
+                className="text-[#38BDF8] hover:underline font-medium cursor-pointer"
+              >
+                Terms &amp; Conditions
+              </button>
+              <button
+                type="button"
+                onClick={() => openLegal('guidelines')}
+                className="text-[#38BDF8] hover:underline font-medium cursor-pointer"
+              >
+                Community Guidelines
+              </button>
+              <button
+                type="button"
+                onClick={() => openLegal('data-ai')}
+                className="text-[#38BDF8] hover:underline font-medium cursor-pointer"
+              >
+                Data &amp; AI Policy
+              </button>
+            </div>
           </div>
         </section>
       </OnboardingShell>
@@ -263,6 +313,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     return (
       <OnboardingShell
         maxWidthClass="max-w-md"
+        onOpenLegal={openLegal}
         headerRight={
           <button
             type="button"
@@ -412,6 +463,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     return (
       <OnboardingShell
         maxWidthClass="max-w-xl"
+        onOpenLegal={openLegal}
         headerRight={
           <span className="text-[11px] text-slate-400 font-medium">
             Progress saved automatically
@@ -617,7 +669,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   // =========================================================
   if (phase === 'completion') {
     return (
-      <OnboardingShell maxWidthClass="max-w-xl">
+      <OnboardingShell maxWidthClass="max-w-xl" onOpenLegal={openLegal}>
         <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-6 border border-sky-400/25">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-400 flex items-center justify-center shrink-0">
@@ -739,7 +791,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     };
 
     return (
-      <OnboardingShell maxWidthClass="max-w-md">
+      <OnboardingShell maxWidthClass="max-w-md" onOpenLegal={openLegal}>
         <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-5 border border-sky-400/25">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-xl bg-sky-500/20 text-[#38BDF8] flex items-center justify-center shrink-0">
@@ -782,6 +834,42 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 placeholder="name@domain.com"
                 className="w-full bg-[#040A1A] border border-[#1E386E] rounded-xl px-3.5 py-2.5 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-sky-400"
               />
+            </div>
+
+            <div className="p-3 rounded-xl bg-[#040A1A]/90 border border-[#1E386E] text-[11px] text-slate-300 leading-relaxed">
+              Before registering, please review our draft{' '}
+              <button
+                type="button"
+                onClick={() => openLegal('terms')}
+                className="text-[#38BDF8] hover:underline font-semibold cursor-pointer"
+              >
+                Terms &amp; Conditions
+              </button>
+              ,{' '}
+              <button
+                type="button"
+                onClick={() => openLegal('privacy')}
+                className="text-[#38BDF8] hover:underline font-semibold cursor-pointer"
+              >
+                Privacy Policy
+              </button>
+              ,{' '}
+              <button
+                type="button"
+                onClick={() => openLegal('guidelines')}
+                className="text-[#38BDF8] hover:underline font-semibold cursor-pointer"
+              >
+                Community Guidelines
+              </button>
+              , and{' '}
+              <button
+                type="button"
+                onClick={() => openLegal('data-ai')}
+                className="text-[#38BDF8] hover:underline font-semibold cursor-pointer"
+              >
+                Data &amp; AI Policy
+              </button>
+              .
             </div>
 
             {error && (
@@ -871,7 +959,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     };
 
     return (
-      <OnboardingShell maxWidthClass="max-w-md">
+      <OnboardingShell maxWidthClass="max-w-md" onOpenLegal={openLegal}>
         <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-5 border border-sky-400/25">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-xl bg-sky-500/20 text-[#38BDF8] flex items-center justify-center shrink-0">
@@ -1016,7 +1104,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   // =========================================================
   if (!isSupabaseConfigured || !emailVerified) {
     return (
-      <OnboardingShell maxWidthClass="max-w-md">
+      <OnboardingShell maxWidthClass="max-w-md" onOpenLegal={openLegal}>
         <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-4 border border-amber-400/30 text-center">
           <div className="w-12 h-12 mx-auto rounded-2xl bg-amber-500/15 border border-amber-400/40 text-amber-300 flex items-center justify-center">
             <Lock className="w-6 h-6" />
@@ -1070,7 +1158,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   };
 
   return (
-    <OnboardingShell maxWidthClass="max-w-md">
+    <OnboardingShell maxWidthClass="max-w-md" onOpenLegal={openLegal}>
       <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-5 border border-sky-400/25">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
@@ -1127,6 +1215,53 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
             ))}
           </div>
 
+          <label className="p-3 rounded-xl bg-[#040A1A] border border-[#1E386E] flex items-start space-x-2.5 text-[11px] text-slate-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={acceptedPolicies}
+              onChange={(e) => {
+                setError('');
+                setAcceptedPolicies(e.target.checked);
+              }}
+              className="mt-0.5 accent-[#19C8FF] shrink-0"
+            />
+            <span className="leading-relaxed">
+              I have reviewed the draft{' '}
+              <button
+                type="button"
+                onClick={() => openLegal('terms')}
+                className="text-[#38BDF8] hover:underline font-semibold cursor-pointer"
+              >
+                Terms &amp; Conditions
+              </button>
+              ,{' '}
+              <button
+                type="button"
+                onClick={() => openLegal('privacy')}
+                className="text-[#38BDF8] hover:underline font-semibold cursor-pointer"
+              >
+                Privacy Policy
+              </button>
+              ,{' '}
+              <button
+                type="button"
+                onClick={() => openLegal('guidelines')}
+                className="text-[#38BDF8] hover:underline font-semibold cursor-pointer"
+              >
+                Community Guidelines
+              </button>
+              , and{' '}
+              <button
+                type="button"
+                onClick={() => openLegal('data-ai')}
+                className="text-[#38BDF8] hover:underline font-semibold cursor-pointer"
+              >
+                Data &amp; AI Policy
+              </button>
+              .
+            </span>
+          </label>
+
           {error && (
             <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300">
               {error}
@@ -1135,7 +1270,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
 
           <button
             type="submit"
-            disabled={busy || !isPasswordValid}
+            disabled={busy || !isPasswordValid || !acceptedPolicies}
             className="w-full py-3 rounded-xl btn-royal text-white font-bold text-xs disabled:opacity-50 cursor-pointer"
           >
             {busy ? 'Creating your Gloweave account...' : 'Complete Registration'}
@@ -1143,5 +1278,18 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         </form>
       </div>
     </OnboardingShell>
+  );
+  };
+
+  return (
+    <>
+      {renderPhase()}
+      <LegalDocumentModal
+        open={legalModalOpen}
+        activeDocId={legalDocId}
+        onSelectDoc={setLegalDocId}
+        onClose={() => setLegalModalOpen(false)}
+      />
+    </>
   );
 };

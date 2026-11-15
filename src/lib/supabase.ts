@@ -220,3 +220,136 @@ export async function fetchUserProfile(userId: string): Promise<PersistedUserPro
   if (error || !data) return null;
   return data as PersistedUserProfile;
 }
+
+export async function updateUserProfile(params: {
+  userId: string;
+  displayName: string;
+  roleIdentity: string;
+  country: string;
+  avatarUrl?: string | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  if (!supabase) {
+    return {
+      ok: false,
+      error: 'Authentication provider is not configured. Changes were saved to your local session only.',
+    };
+  }
+
+  const { error: authError } = await supabase.auth.updateUser({
+    data: {
+      display_name: params.displayName.trim(),
+      role_identity: params.roleIdentity.trim(),
+      country: params.country.trim(),
+    },
+  });
+
+  if (authError) {
+    return { ok: false, error: authError.message };
+  }
+
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({
+      display_name: params.displayName.trim(),
+      role_identity: params.roleIdentity.trim(),
+      country: params.country.trim(),
+      avatar_url: params.avatarUrl ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', params.userId);
+
+  if (profileError) {
+    return { ok: false, error: profileError.message };
+  }
+
+  return { ok: true };
+}
+
+export async function updateAccountEmail(newEmail: string): Promise<{
+  ok: boolean;
+  error?: string;
+}> {
+  if (!supabase) {
+    return {
+      ok: false,
+      error: 'Authentication provider is not configured. Email changes require an active Supabase Auth backend.',
+    };
+  }
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session?.user) {
+    return {
+      ok: false,
+      error: 'Please sign in to an authenticated account before changing your email address.',
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser(
+    { email: newEmail.trim() },
+    { emailRedirectTo: `${window.location.origin}${window.location.pathname}` }
+  );
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
+}
+
+export async function updateAccountPassword(params: {
+  newPassword: string;
+  currentEmail?: string;
+  currentPassword?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  if (!supabase) {
+    return {
+      ok: false,
+      error: 'Authentication provider is not configured. Password changes require an active Supabase Auth backend.',
+    };
+  }
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session?.user) {
+    return {
+      ok: false,
+      error: 'Please sign in to an authenticated account before changing your password.',
+    };
+  }
+
+  // Optional current-password verification if user provides it
+  if (params.currentEmail && params.currentPassword) {
+    const { error: reauthError } = await supabase.auth.signInWithPassword({
+      email: params.currentEmail.trim(),
+      password: params.currentPassword,
+    });
+    if (reauthError) {
+      return { ok: false, error: 'Current password is incorrect.' };
+    }
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: params.newPassword,
+  });
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
+}
+
+export async function requestAccountDeletion(): Promise<{
+  ok: boolean;
+  awaitingBackend: boolean;
+  message: string;
+}> {
+  if (supabase) {
+    await supabase.auth.signOut();
+  }
+  return {
+    ok: false,
+    awaitingBackend: true,
+    message:
+      'Local session cleared and signed out. Permanent server-side deletion of auth records awaits a dedicated backend deletion endpoint (Edge Function / Admin API).',
+  };
+}

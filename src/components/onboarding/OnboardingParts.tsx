@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 import { Check, Eye, EyeOff, Globe } from 'lucide-react';
+import { LegalDocumentId } from '../../types/gloweave';
 
 interface OnboardingShellProps {
   children: React.ReactNode;
   headerRight?: React.ReactNode;
   maxWidthClass?: string;
+  onOpenLegal?: (docId: LegalDocumentId) => void;
 }
 
 export const OnboardingShell: React.FC<OnboardingShellProps> = ({
   children,
   headerRight,
   maxWidthClass = 'max-w-2xl',
+  onOpenLegal,
 }) => (
   <div className="min-h-screen text-slate-100 antialiased selection:bg-[#19C8FF] selection:text-slate-900 flex flex-col justify-between p-4 sm:p-6 md:p-8">
     {/* Brand Header */}
@@ -32,8 +35,29 @@ export const OnboardingShell: React.FC<OnboardingShellProps> = ({
     {/* Centered Stage */}
     <main className={`w-full ${maxWidthClass} mx-auto my-8`}>{children}</main>
 
-    <footer className="w-full max-w-5xl mx-auto text-center text-[11px] text-slate-500">
-      Gloweave Global Problem Discovery &amp; Innovation Network
+    <footer className="w-full max-w-5xl mx-auto text-center text-[11px] text-slate-400 space-y-2">
+      <div>Gloweave Global Problem Discovery &amp; Innovation Network</div>
+      {onOpenLegal && (
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+          {(
+            [
+              { id: 'privacy', label: 'Privacy Policy' },
+              { id: 'terms', label: 'Terms & Conditions' },
+              { id: 'guidelines', label: 'Community Guidelines' },
+              { id: 'data-ai', label: 'Data & AI Policy' },
+            ] as const
+          ).map((doc) => (
+            <button
+              key={doc.id}
+              type="button"
+              onClick={() => onOpenLegal(doc.id)}
+              className="text-sky-300/90 hover:text-[#38BDF8] hover:underline cursor-pointer"
+            >
+              {doc.label}
+            </button>
+          ))}
+        </div>
+      )}
     </footer>
   </div>
 );

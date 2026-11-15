@@ -7,6 +7,7 @@ import {
   Crown,
   Globe,
   Home,
+  LifeBuoy,
   Lightbulb,
   LineChart,
   LogOut,
@@ -17,6 +18,7 @@ import {
   PieChart,
   Plus,
   Rocket,
+  Scale,
   Search,
   Settings,
   Trophy,
@@ -200,22 +202,60 @@ export const DesktopSidebar: React.FC<SidebarProps> = ({
           <button
             type="button"
             onClick={() => onSelectView('profile')}
-            className={`w-full flex items-center space-x-2 px-2 py-1.5 rounded-lg transition ${
+            className={`w-full flex items-center space-x-2 px-2 py-1.5 rounded-lg transition cursor-pointer ${
               activeView === 'profile'
                 ? 'bg-white/10 text-cyan-300'
                 : 'text-slate-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            <Settings className="w-3.5 h-3.5" />
-            <span>Profile &amp; Settings</span>
+            <Users className="w-3.5 h-3.5" />
+            <span>Profile</span>
           </button>
+          <button
+            type="button"
+            onClick={() => onSelectView('settings')}
+            className={`w-full flex items-center space-x-2 px-2 py-1.5 rounded-lg transition cursor-pointer ${
+              activeView === 'settings'
+                ? 'bg-white/10 text-cyan-300'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span>Settings</span>
+          </button>
+          <div className="grid grid-cols-2 gap-1 pt-0.5">
+            <button
+              type="button"
+              onClick={() => onSelectView('support')}
+              className={`flex items-center space-x-1.5 px-2 py-1.5 rounded-lg transition cursor-pointer ${
+                activeView === 'support'
+                  ? 'bg-white/10 text-cyan-300'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <LifeBuoy className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Support</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onSelectView('legal')}
+              className={`flex items-center space-x-1.5 px-2 py-1.5 rounded-lg transition cursor-pointer ${
+                activeView === 'legal'
+                  ? 'bg-white/10 text-cyan-300'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Scale className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Legal</span>
+            </button>
+          </div>
           <button
             type="button"
             onClick={onSignOut}
             className="w-full flex items-center space-x-2 text-slate-400 hover:text-rose-300 px-2 py-1.5 rounded-lg hover:bg-white/5 transition cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span>{isAuthenticated ? 'Logout' : 'Register / Onboarding'}</span>
+            <span>{isAuthenticated ? 'Sign Out' : 'Register / Sign In'}</span>
           </button>
         </div>
       </div>
@@ -494,6 +534,9 @@ export const MobileDrawer: React.FC<
     { id: 'community', label: 'Community' },
     { id: 'messages', label: 'Messages' },
     { id: 'notifications', label: 'Notifications' },
+    { id: 'settings', label: 'Settings' },
+    { id: 'support', label: 'Help & Support' },
+    { id: 'legal', label: 'Legal & Policies' },
   ];
 
   return (
@@ -591,7 +634,7 @@ export const MobileDrawer: React.FC<
             className="w-full flex items-center justify-center space-x-2 py-2 rounded-xl bg-[#0A1633] border border-[#1E386E] text-xs font-semibold text-slate-300 hover:text-rose-300 transition cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span>{isAuthenticated ? 'Logout' : 'Register / Onboarding'}</span>
+            <span>{isAuthenticated ? 'Sign Out' : 'Register / Sign In'}</span>
           </button>
         </div>
       </div>
