@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gloweave - Discover • Connect • Innovate</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#060B18',
+                        cardBg: '#0A1124',
+                        cardHover: '#0E172E',
+                        accentBlue: '#19C8FF',
+                        accentPurple: '#8B5CF6',
+                        borderSubtle: '#1E293B',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #060B18;
+            color: #F8FAFC;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #060B18;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1E293B;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+        .glass-card {
+            background: linear-gradient(135deg, rgba(10, 17, 36, 0.9) 0%, rgba(14, 23, 46, 0.8) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+        }
+        .glow-effect {
+            box-shadow: 0 0 25px rgba(25, 200, 255, 0.15);
+        }
+        .glow-purple {
+            box-shadow: 0 0 25px rgba(139, 92, 246, 0.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-darkBg text-slate-100 antialiased selection:bg-accentBlue selection:text-slate-900">
+
+    <!----------------------------------------------------
+         MOBILE VIEW (Visible on screens < 768px)
+    ----------------------------------------------------->
+    <div class="block md:hidden pb-24">
+        <!-- Mobile Top Header -->
+        <header class="sticky top-0 z-40 bg-darkBg/95 backdrop-blur border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                    <i class="fa-solid fa-globe text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-cyan-100 to-cyan-400 bg-clip-text text-transparent">Gloweave</h1>
+                    <p class="text-[10px] text-slate-400 tracking-wider uppercase font-medium">Discover • Connect • Innovate</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button class="relative p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300">
+                    <i class="fa-regular fa-bell text-sm"></i>
+                    <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center text-white">7</span>
+                </button>
+                <button id="mobile-menu-btn" class="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300">
+                    <i class="fa-solid fa-bars text-sm"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Mobile Hero -->
+        <section class="relative px-4 pt-6 pb-8 overflow-hidden">
+            <!-- Background Glows -->
+            <div class="absolute -top-10 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute top-20 left-0 w-48 h-48 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="relative z-10">
+                <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-semibold mb-3">
+                    <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                    <span>Global Innovation Network</span>
+                </div>
+                <h2 class="text-3xl font-extrabold tracking-tight leading-tight mb-3">
+                    A Smarter, <span class="text-accentBlue">More Connected</span> World
+                </h2>
+                <p class="text-slate-400 text-xs leading-relaxed mb-6">
+                    Discover real problems, explore solutions, and connect with innovators across the globe.
+                </p>
+                <button class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-sm shadow-lg shadow-cyan-500/25 flex items-center justify-center space-x-2 active:scale-98 transition">
+                    <span>Explore Global Intelligence</span>
+                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                </button>
+            </div>
+
+            <!-- Mobile Globe Visual Graphic -->
+            <div class="mt-6 relative h-44 rounded-2xl overflow-hidden glass-card p-4 flex items-center justify-center border border-cyan-500/20 glow-effect">
+                <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-900/30 via-slate-950/80 to-slate-950"></div>
+                <div class="relative text-center">
+                    <div class="w-24 h-24 mx-auto rounded-full border border-cyan-500/40 flex items-center justify-center relative animate-spin" style="animation-duration: 25s;">
+                        <div class="absolute inset-0 rounded-full border border-dashed border-cyan-400/30"></div>
+                        <i class="fa-solid fa-earth-americas text-4xl text-cyan-400"></i>
+                    </div>
+                    <div class="mt-3 flex items-center justify-center space-x-1 text-[11px] text-cyan-300 font-medium">
+                        <i class="fa-solid fa-signal text-[10px]"></i>
+                        <span>Live Global Mesh Connected</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile Quick Stats Bar -->
+            <div class="grid grid-cols-3 gap-2.5 mt-4">
+                <div class="glass-card p-3 rounded-xl text-center">
+                    <div class="text-base font-extrabold text-white">195</div>
+                    <div class="text-[10px] text-slate-400 font-medium mt-0.5">Countries</div>
+                </div>
+                <div class="glass-card p-3 rounded-xl text-center">
+                    <div class="text-base font-extrabold text-white">2.5M+</div>
+                    <div class="text-[10px] text-slate-400 font-medium mt-0.5">Users</div>
+                </div>
+                <div class="glass-card p-3 rounded-xl text-center">
+                    <div class="text-base font-extrabold text-white">48K+</div>
+                    <div class="text-[10px] text-slate-400 font-medium mt-0.5">Startups</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Mobile Trending Problems -->
+        <section class="px-4 mb-6">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-fire text-orange-500 text-sm"></i>
+                    <h3 class="font-bold text-sm">Trending Problems</h3>
+                </div>
+                <a href="#" class="text-xs text-accentBlue font-semibold">See all →</a>
+            </div>
+            
+            <div class="space-y-2.5">
+                <div class="glass-card p-3 rounded-xl flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 rounded-lg bg-cover bg-center shrink-0 border border-slate-700" style="background-image: url('https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=100&auto=format&fit=crop');"></div>
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-100 line-clamp-1">Clean Energy Access for Rural Areas</h4>
+                            <p class="text-[10px] text-slate-400 mt-0.5">12.5K views</p>
+                        </div>
+                    </div>
+                    <span class="px-2 py-1 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-semibold shrink-0">Growing</span>
+                </div>
+
+                <div class="glass-card p-3 rounded-xl flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 rounded-lg bg-cover bg-center shrink-0 border border-slate-700" style="background-image: url('https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=100&auto=format&fit=crop');"></div>
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-100 line-clamp-1">Affordable Healthcare in Developing Regions</h4>
+                            <p class="text-[10px] text-slate-400 mt-0.5">28.7K views</p>
+                        </div>
+                    </div>
+                    <span class="px-2 py-1 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-semibold shrink-0">High Priority</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Mobile Bottom Navigation Bar -->
+        <nav class="fixed bottom-0 left-0 right-0 z-50 bg-darkBg/95 backdrop-blur-lg border-t border-slate-800/80 px-4 py-2 flex items-center justify-around">
+            <a href="#" class="flex flex-col items-center text-accentBlue">
+                <i class="fa-solid fa-house text-base"></i>
+                <span class="text-[10px] font-semibold mt-1">Home</span>
+            </a>
+            <a href="#" class="flex flex-col items-center text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-compass text-base"></i>
+                <span class="text-[10px] font-medium mt-1">Discover</span>
+            </a>
+            <a href="#" class="flex flex-col items-center text-slate-400 hover:text-slate-200">
+                <div class="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                </div>
+                <span class="text-[10px] font-medium mt-0.5">Submit</span>
+            </a>
+            <a href="#" class="flex flex-col items-center text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-trophy text-base"></i>
+                <span class="text-[10px] font-medium mt-1">Rankings</span>
+            </a>
+            <a href="#" class="flex flex-col items-center text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-user text-base"></i>
+                <span class="text-[10px] font-medium mt-1">Profile</span>
+            </a>
+        </nav>
+    </div>
+
+    <!----------------------------------------------------
+         DESKTOP / LAPTOP VIEW (Visible on screens >= 768px)
+    ----------------------------------------------------->
+    <div class="hidden md:flex min-h-screen">
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-darkBg border-r border-slate-800/80 flex flex-col justify-between shrink-0 fixed inset-y-0 left-0 z-30">
+            <div>
+                <!-- Brand Header -->
+                <div class="p-5 flex items-center space-x-3 border-b border-slate-800/60">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                        <i class="fa-solid fa-globe text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-cyan-100 to-cyan-400 bg-clip-text text-transparent">Gloweave</h1>
+                        <p class="text-[10px] text-slate-400 tracking-wider uppercase font-medium">Discover • Connect • Innovate</p>
+                    </div>
+                </div>
+
+                <!-- Nav Links -->
+                <nav class="p-3 space-y-1">
+                    <a href="#" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500/20 to-blue-600/10 text-cyan-400 border border-cyan-500/30 font-semibold text-sm">
+                        <i class="fa-solid fa-house w-5"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 font-medium text-sm transition">
+                        <i class="fa-solid fa-compass w-5"></i>
+                        <span>Discover</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 font-medium text-sm transition">
+                        <i class="fa-solid fa-lightbulb w-5"></i>
+                        <span>Problems</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 font-medium text-sm transition">
+                        <i class="fa-solid fa-rocket w-5"></i>
+                        <span>Solutions</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 font-medium text-sm transition">
+                        <i class="fa-solid fa-cubes w-5"></i>
+                        <span>Startups</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 font-medium text-sm transition">
+                        <i class="fa-solid fa-trophy w-5"></i>
+                        <span>Rankings</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 font-medium text-sm transition">
+                        <i class="fa-solid fa-chart-pie w-5"></i>
+                        <span>Distribution</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 font-medium text-sm transition">
+                        <i class="fa-solid fa-chart-line w-5"></i>
+                        <span>Analytics</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 font-medium text-sm transition">
+                        <i class="fa-solid fa-users w-5"></i>
+                        <span>Community</span>
+                    </a>
+                    <div class="pt-2 pb-1 border-t border-slate-800/60 my-2"></div>
+                    <a href="#" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 font-medium text-sm transition">
+                        <div class="flex items-center space-x-3">
+                            <i class="fa-regular fa-message w-5"></i>
+                            <span>Messages</span>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold">3</span>
+                    </a>
+                    <a href="#" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 font-medium text-sm transition">
+                        <div class="flex items-center space-x-3">
+                            <i class="fa-regular fa-bell w-5"></i>
+                            <span>Notifications</span>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold">7</span>
+                    </a>
+                </nav>
+            </div>
+
+            <!-- Bottom Profile & Upgrade -->
+            <div class="p-4 border-t border-slate-800/60 space-y-3">
+                <a href="#" class="flex items-center justify-center space-x-2 w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 hover:brightness-110 transition">
+                    <i class="fa-solid fa-crown text-slate-950"></i>
+                    <span>Upgrade to Pro</span>
+                </a>
+
+                <div class="flex items-center justify-between pt-2">
+                    <div class="flex items-center space-x-2.5">
+                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop" alt="Chinaza Joseph" class="w-9 h-9 rounded-full object-cover border border-cyan-500/40">
+                        <div>
+                            <h4 class="text-xs font-bold text-white">Chinaza Joseph</h4>
+                            <p class="text-[10px] text-emerald-400 font-medium flex items-center space-x-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                <span>Pro Member</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="relative group">
+                        <button class="p-2 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-900">
+                            <i class="fa-solid fa-ellipsis-vertical text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="space-y-1 text-xs">
+                    <a href="#" class="flex items-center space-x-2 text-slate-400 hover:text-slate-200 px-2 py-1.5 rounded-lg hover:bg-slate-900">
+                        <i class="fa-solid fa-gear w-4 text-xs"></i>
+                        <span>Settings</span>
+                    </a>
+                    <a href="#" class="flex items-center space-x-2 text-rose-400 hover:text-rose-300 px-2 py-1.5 rounded-lg hover:bg-slate-900">
+                        <i class="fa-solid fa-right-from-bracket w-4 text-xs"></i>
+                        <span>Logout</span>
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="ml-64 flex-1 p-6 space-y-6 max-w-[1440px]">
+            <!-- Top Search and User Bar -->
+            <header class="flex items-center justify-between pb-4 border-b border-slate-800/60">
+                <div class="relative w-96">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text" placeholder="Search for problems, solutions, startups or people... (e.g. "AI for healthcare")" class="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/50 transition">
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="flex items-center space-x-2 px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 text-xs font-semibold">
+                        <i class="fa-solid fa-globe text-cyan-400"></i>
+                        <span>Global</span>
+                        <i class="fa-solid fa-chevron-down text-[10px] text-slate-500"></i>
+                    </button>
+                    <button class="relative p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300">
+                        <i class="fa-regular fa-bell text-sm"></i>
+                        <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center text-white">7</span>
+                    </button>
+                    <div class="flex items-center space-x-2.5 pl-2 border-l border-slate-800">
+                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop" alt="Chinaza" class="w-8 h-8 rounded-full object-cover border border-cyan-500/40">
+                        <span class="text-xs font-bold text-slate-200">Chinaza</span>
+                        <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Hero Banner -->
+            <section class="relative rounded-3xl overflow-hidden glass-card p-8 border border-cyan-500/20 glow-effect">
+                <div class="absolute -right-20 -top-20 w-96 h-96 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute right-40 bottom-0 w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                    <div class="lg:col-span-7 space-y-4">
+                        <div class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-semibold">
+                            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                            <span>Global Intelligence Platform</span>
+                        </div>
+                        <h2 class="text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight">
+                            Gloweave <br>
+                            A Smarter, <span class="text-accentBlue">More Connected</span> World
+                        </h2>
+                        <p class="text-slate-400 text-sm leading-relaxed max-w-xl">
+                            Discover real problems, explore solutions, and connect with innovators across the globe.
+                        </p>
+                        <div class="flex items-center space-x-3 pt-2">
+                            <button class="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-xs shadow-lg shadow-cyan-500/25 flex items-center space-x-2 hover:brightness-110 transition">
+                                <span>Explore Global Intelligence</span>
+                                <i class="fa-solid fa-arrow-right text-xs"></i>
+                            </button>
+                            <button class="px-6 py-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 font-bold text-xs hover:bg-slate-800 transition">
+                                Submit a Resource +
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right Stats Pill & Holographic Earth Illustration -->
+                    <div class="lg:col-span-5 flex items-center justify-end">
+                        <div class="w-full max-w-xs glass-card p-5 rounded-2xl border border-cyan-500/30 space-y-4 shadow-2xl">
+                            <div class="flex items-center space-x-3 p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                                <div class="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400 font-bold text-base">
+                                    <i class="fa-solid fa-globe"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xl font-extrabold text-white">195</div>
+                                    <div class="text-xs text-slate-400 font-medium">Countries</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3 p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                                <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-base">
+                                    <i class="fa-solid fa-users"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xl font-extrabold text-white">2.5M+</div>
+                                    <div class="text-xs text-slate-400 font-medium">Users</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3 p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                                <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-base">
+                                    <i class="fa-solid fa-rocket"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xl font-extrabold text-white">48K+</div>
+                                    <div class="text-xs text-slate-400 font-medium">Startups</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4 KPI Metrics Row -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass-card p-5 rounded-2xl relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                            <i class="fa-solid fa-lightbulb text-base"></i>
+                        </div>
+                        <span class="text-emerald-400 text-xs font-bold">+12% ↑</span>
+                    </div>
+                    <div class="text-2xl font-extrabold text-white mb-0.5">12.8K</div>
+                    <div class="text-xs text-slate-400 font-medium">Problems</div>
+                    <!-- Sparkline graphic placeholder -->
+                    <div class="mt-3 h-6 flex items-end space-x-1">
+                        <div class="w-1/6 bg-purple-500/30 h-3 rounded-t"></div>
+                        <div class="w-1/6 bg-purple-500/40 h-5 rounded-t"></div>
+                        <div class="w-1/6 bg-purple-500/50 h-4 rounded-t"></div>
+                        <div class="w-1/6 bg-purple-500/60 h-7 rounded-t"></div>
+                        <div class="w-1/6 bg-purple-500/80 h-9 rounded-t"></div>
+                        <div class="w-1/6 bg-purple-500 h-12 rounded-t"></div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-5 rounded-2xl relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                            <i class="fa-solid fa-shield-check text-base"></i>
+                        </div>
+                        <span class="text-emerald-400 text-xs font-bold">+8% ↑</span>
+                    </div>
+                    <div class="text-2xl font-extrabold text-white mb-0.5">6.4K</div>
+                    <div class="text-xs text-slate-400 font-medium">Solutions</div>
+                    <div class="mt-3 h-6 flex items-end space-x-1">
+                        <div class="w-1/6 bg-emerald-500/30 h-4 rounded-t"></div>
+                        <div class="w-1/6 bg-emerald-500/40 h-6 rounded-t"></div>
+                        <div class="w-1/6 bg-emerald-500/50 h-5 rounded-t"></div>
+                        <div class="w-1/6 bg-emerald-500/60 h-8 rounded-t"></div>
+                        <div class="w-1/6 bg-emerald-500/80 h-10 rounded-t"></div>
+                        <div class="w-1/6 bg-emerald-500 h-12 rounded-t"></div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-5 rounded-2xl relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                            <i class="fa-solid fa-rocket text-base"></i>
+                        </div>
+                        <span class="text-emerald-400 text-xs font-bold">+15% ↑</span>
+                    </div>
+                    <div class="text-2xl font-extrabold text-white mb-0.5">3.1K</div>
+                    <div class="text-xs text-slate-400 font-medium">Startups</div>
+                    <div class="mt-3 h-6 flex items-end space-x-1">
+                        <div class="w-1/6 bg-amber-500/30 h-3 rounded-t"></div>
+                        <div class="w-1/6 bg-amber-500/40 h-5 rounded-t"></div>
+                        <div class="w-1/6 bg-amber-500/50 h-7 rounded-t"></div>
+                        <div class="w-1/6 bg-amber-500/60 h-6 rounded-t"></div>
+                        <div class="w-1/6 bg-amber-500/80 h-10 rounded-t"></div>
+                        <div class="w-1/6 bg-amber-500 h-12 rounded-t"></div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-5 rounded-2xl relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                            <i class="fa-solid fa-comments text-base"></i>
+                        </div>
+                        <span class="text-emerald-400 text-xs font-bold">+20% ↑</span>
+                    </div>
+                    <div class="text-2xl font-extrabold text-white mb-0.5">892K</div>
+                    <div class="text-xs text-slate-400 font-medium">Feedbacks</div>
+                    <div class="mt-3 h-6 flex items-end space-x-1">
+                        <div class="w-1/6 bg-cyan-500/30 h-5 rounded-t"></div>
+                        <div class="w-1/6 bg-cyan-500/40 h-4 rounded-t"></div>
+                        <div class="w-1/6 bg-cyan-500/50 h-7 rounded-t"></div>
+                        <div class="w-1/6 bg-cyan-500/60 h-9 rounded-t"></div>
+                        <div class="w-1/6 bg-cyan-500/80 h-11 rounded-t"></div>
+                        <div class="w-1/6 bg-cyan-500 h-12 rounded-t"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle 3-Column Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Trending Problems (4 Cols) -->
+                <div class="lg:col-span-4 glass-card p-5 rounded-2xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-solid fa-fire text-orange-500 text-sm"></i>
+                                <h3 class="font-bold text-sm">Trending Problems</h3>
+                            </div>
+                            <a href="#" class="text-xs text-accentBlue font-semibold hover:underline">See all →</a>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="text-xs font-extrabold text-slate-500 w-4">1</div>
+                                    <div class="w-10 h-10 rounded-lg bg-cover bg-center shrink-0 border border-slate-700" style="background-image: url('https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=100&auto=format&fit=crop');"></div>
+                                    <div>
+                                        <h4 class="text-xs font-bold text-slate-100 line-clamp-1">Clean Energy Access for Rural Areas</h4>
+                                        <p class="text-[10px] text-slate-400 mt-0.5">32.5K views</p>
+                                    </div>
+                                </div>
+                                <span class="px-2 py-1 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-semibold shrink-0">High Priority</span>
+                            </div>
+
+                            <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="text-xs font-extrabold text-slate-500 w-4">2</div>
+                                    <div class="w-10 h-10 rounded-lg bg-cover bg-center shrink-0 border border-slate-700" style="background-image: url('https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=100&auto=format&fit=crop');"></div>
+                                    <div>
+                                        <h4 class="text-xs font-bold text-slate-100 line-clamp-1">Affordable Healthcare in Developing Regions</h4>
+                                        <p class="text-[10px] text-slate-400 mt-0.5">28.7K views</p>
+                                    </div>
+                                </div>
+                                <span class="px-2 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-semibold shrink-0">Growing</span>
+                            </div>
+
+                            <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="text-xs font-extrabold text-slate-500 w-4">3</div>
+                                    <div class="w-10 h-10 rounded-lg bg-cover bg-center shrink-0 border border-slate-700" style="background-image: url('https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=100&auto=format&fit=crop');"></div>
+                                    <div>
+                                        <h4 class="text-xs font-bold text-slate-100 line-clamp-1">Food Security & Smart Agriculture</h4>
+                                        <p class="text-[10px] text-slate-400 mt-0.5">21.4K views</p>
+                                    </div>
+                                </div>
+                                <span class="px-2 py-1 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-semibold shrink-0">Trending</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Featured Solution (4 Cols) -->
+                <div class="lg:col-span-4 glass-card p-5 rounded-2xl flex flex-col justify-between border border-cyan-500/20">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-solid fa-star text-amber-400 text-sm"></i>
+                                <h3 class="font-bold text-sm">Featured Solution</h3>
+                            </div>
+                            <a href="#" class="text-xs text-accentBlue font-semibold hover:underline">See details →</a>
+                        </div>
+                        
+                        <!-- Solution Card Content -->
+                        <div class="space-y-3">
+                            <div class="rounded-xl overflow-hidden border border-slate-800 h-32 relative bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?w=500&auto=format&fit=crop');">
+                                <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
+                                <div class="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                                    <span class="text-xs font-bold text-white flex items-center space-x-1.5">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                        <span>EcoPower AI</span>
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">Verified</span>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-100">Smart energy management for homes and businesses.</h4>
+                                <div class="flex flex-wrap gap-1 mt-2">
+                                    <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] text-slate-300 font-medium">Clean Energy</span>
+                                    <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] text-slate-300 font-medium">AI</span>
+                                    <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] text-slate-300 font-medium">Sustainability</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4 flex items-center justify-between border-t border-slate-800/80 mt-4">
+                        <div class="flex items-center space-x-2 text-xs text-slate-400">
+                            <i class="fa-solid fa-users text-cyan-400"></i>
+                            <span>48.2K users</span>
+                            <span class="text-amber-400 font-bold ml-1">★ 4.9 (2.2k)</span>
+                        </div>
+                        <a href="#" class="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-xs shadow-md shadow-cyan-500/20 flex items-center space-x-1.5 hover:brightness-110 transition">
+                            <span>Visit Website</span>
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Top Contributors (4 Cols) -->
+                <div class="lg:col-span-4 glass-card p-5 rounded-2xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-solid fa-trophy text-amber-400 text-sm"></i>
+                                <h3 class="font-bold text-sm">Top Contributors</h3>
+                            </div>
+                            <a href="#" class="text-xs text-accentBlue font-semibold hover:underline">See all →</a>
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="text-amber-400 font-bold text-sm w-4 text-center">1</div>
+                                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop" alt="Sarah" class="w-9 h-9 rounded-full object-cover border border-slate-700">
+                                    <div>
+                                        <h4 class="text-xs font-bold text-white">Sarah Innovator</h4>
+                                        <p class="text-[10px] text-slate-400">Solving 45 problems</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xs font-extrabold text-emerald-400">98.7</span>
+                                    <i class="fa-solid fa-arrow-up text-[10px] text-emerald-400 ml-0.5"></i>
+                                </div>
+                            </div>
+
+                            <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="text-slate-400 font-bold text-sm w-4 text-center">2</div>
+                                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop" alt="TechBuilder" class="w-9 h-9 rounded-full object-cover border border-slate-700">
+                                    <div>
+                                        <h4 class="text-xs font-bold text-white">TechBuilder</h4>
+                                        <p class="text-[10px] text-slate-400">Solving 38 problems</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xs font-extrabold text-emerald-400">96.1</span>
+                                    <i class="fa-solid fa-arrow-up text-[10px] text-emerald-400 ml-0.5"></i>
+                                </div>
+                            </div>
+
+                            <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="text-amber-700 font-bold text-sm w-4 text-center">3</div>
+                                    <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&auto=format&fit=crop" alt="Al Dreamer" class="w-9 h-9 rounded-full object-cover border border-slate-700">
+                                    <div>
+                                        <h4 class="text-xs font-bold text-white">AI Dreamer</h4>
+                                        <p class="text-[10px] text-slate-400">Solving 32 problems</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xs font-extrabold text-emerald-400">93.9</span>
+                                    <i class="fa-solid fa-arrow-up text-[10px] text-emerald-400 ml-0.5"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom 2-Column Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-8">
+                <!-- Global Insights (6 Cols) -->
+                <div class="lg:col-span-6 glass-card p-6 rounded-2xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-solid fa-earth-americas text-cyan-400 text-sm"></i>
+                                <h3 class="font-bold text-sm">Global Insights</h3>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                            <!-- Mini Dotted Map graphic -->
+                            <div class="md:col-span-7 h-36 rounded-xl bg-slate-950/80 border border-slate-800 relative flex items-center justify-center p-3">
+                                <div class="absolute inset-0 bg-[radial-gradient(#19C8FF_1px,transparent_1px)] [background-size:12px_12px] opacity-25"></div>
+                                <div class="relative text-center">
+                                    <i class="fa-solid fa-map text-3xl text-cyan-500/50 mb-1"></i>
+                                    <p class="text-[10px] text-cyan-300 font-semibold">Active Node Distribution</p>
+                                </div>
+                            </div>
+
+                            <!-- Region stats list -->
+                            <div class="md:col-span-5 space-y-2">
+                                <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Top Regions</div>
+                                <div class="space-y-1.5 text-xs">
+                                    <div class="flex items-center justify-between">
+                                        <span class="flex items-center space-x-1.5 text-slate-300">
+                                            <span>🇺🇸</span>
+                                            <span>USA</span>
+                                        </span>
+                                        <span class="font-bold text-white">28.4%</span>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="flex items-center space-x-1.5 text-slate-300">
+                                            <span>🇳🇬</span>
+                                            <span>Nigeria</span>
+                                        </span>
+                                        <span class="font-bold text-white">24.7%</span>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="flex items-center space-x-1.5 text-slate-300">
+                                            <span>🇬🇧</span>
+                                            <span>UK</span>
+                                        </span>
+                                        <span class="font-bold text-white">18.9%</span>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="flex items-center space-x-1.5 text-slate-300">
+                                            <span>🇮🇳</span>
+                                            <span>India</span>
+                                        </span>
+                                        <span class="font-bold text-white">16.2%</span>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="flex items-center space-x-1.5 text-slate-400">
+                                            <span>🌐</span>
+                                            <span>Others</span>
+                                        </span>
+                                        <span class="font-bold text-slate-400">11.8%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Your Website or Startup & Go Pro Cards (6 Cols combined) -->
+                <div class="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <!-- Submit Card -->
+                    <div class="glass-card p-5 rounded-2xl flex flex-col justify-between bg-gradient-to-br from-cyan-950/40 to-slate-900 border border-cyan-500/30">
+                        <div>
+                            <div class="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center mb-3">
+                                <i class="fa-solid fa-rocket text-sm"></i>
+                            </div>
+                            <h3 class="font-bold text-sm text-white mb-1">Submit Your Website or Startup</h3>
+                            <p class="text-[11px] text-slate-400 leading-relaxed mb-4">Get discovered by the right audience. Receive feedback within 24–48 hours.</p>
+                            
+                            <div class="space-y-2">
+                                <input type="text" placeholder="https://your-product.com" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500">
+                                <button class="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-xs shadow-md shadow-cyan-500/20 hover:brightness-110 transition flex items-center justify-center space-x-1.5">
+                                    <span>Submit</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-3 mt-3 border-t border-slate-800/80 text-[10px] text-slate-400">
+                            <span class="flex items-center space-x-1"><i class="fa-solid fa-check text-cyan-400"></i><span>Analysis</span></span>
+                            <span class="flex items-center space-x-1"><i class="fa-solid fa-check text-cyan-400"></i><span>Targeted</span></span>
+                            <span class="flex items-center space-x-1"><i class="fa-solid fa-check text-cyan-400"></i><span>Insights</span></span>
+                        </div>
+                    </div>
+
+                    <!-- Go Pro Card -->
+                    <div class="glass-card p-5 rounded-2xl flex flex-col justify-between bg-gradient-to-br from-purple-950/40 via-slate-900 to-slate-950 border border-purple-500/30 glow-purple">
+                        <div>
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                                    <i class="fa-solid fa-crown text-sm"></i>
+                                </div>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">PRO ACCESS</span>
+                            </div>
+                            <h3 class="font-bold text-sm text-white mb-1">Go Pro – Get More Reach</h3>
+                            <p class="text-[11px] text-slate-400 leading-relaxed mb-3">Supercharge your visibility and scale faster.</p>
+
+                            <ul class="space-y-1.5 text-[11px] text-slate-300">
+                                <li class="flex items-center space-x-2">
+                                    <i class="fa-solid fa-check text-purple-400 text-xs"></i>
+                                    <span>Reach up to 20 users (vs 12)</span>
+                                </li>
+                                <li class="flex items-center space-x-2">
+                                    <i class="fa-solid fa-check text-purple-400 text-xs"></i>
+                                    <span>Priority ranking & visibility</span>
+                                </li>
+                                <li class="flex items-center space-x-2">
+                                    <i class="fa-solid fa-check text-purple-400 text-xs"></i>
+                                    <span>Advanced analytics & insights</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="pt-3 mt-3 border-t border-slate-800/80">
+                            <button class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/20 hover:brightness-110 transition flex items-center justify-center space-x-1.5">
+                                <span>Upgrade to Pro →</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Mobile Menu Drawer (Hidden by default) -->
+    <div id="mobile-drawer" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden md:hidden">
+        <div class="absolute right-0 top-0 bottom-0 w-4/5 max-w-xs bg-darkBg border-l border-slate-800 p-5 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center">
+                            <i class="fa-solid fa-globe text-white text-sm"></i>
+                        </div>
+                        <span class="font-extrabold text-base">Gloweave</span>
+                    </div>
+                    <button id="close-drawer-btn" class="p-2 text-slate-400 hover:text-white">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+
+                <div class="space-y-2 text-sm font-medium">
+                    <a href="#" class="block px-3 py-2 rounded-xl bg-cyan-500/10 text-cyan-400">Home</a>
+                    <a href="#" class="block px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-900">Discover</a>
+                    <a href="#" class="block px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-900">Problems</a>
+                    <a href="#" class="block px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-900">Solutions</a>
+                    <a href="#" class="block px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-900">Startups</a>
+                    <a href="#" class="block px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-900">Rankings</a>
+                    <a href="#" class="block px-3 py-2 rounded-xl text-slate-300 hover:bg-slate-900">Analytics</a>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-800">
+                <div class="flex items-center space-x-3 mb-3">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop" alt="Chinaza" class="w-10 h-10 rounded-full object-cover">
+                    <div>
+                        <div class="font-bold text-sm">Chinaza Joseph</div>
+                        <div class="text-xs text-emerald-400">Pro Member</div>
+                    </div>
+                </div>
+                <button class="w-full py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs">Upgrade to Pro</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple toggle script for mobile drawer
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const closeDrawerBtn = document.getElementById('close-drawer-btn');
+        const mobileDrawer = document.getElementById('mobile-drawer');
+
+        if (mobileMenuBtn && mobileDrawer && closeDrawerBtn) {
+            mobileMenuBtn.addEventListener('click', () => {
+                mobileDrawer.classList.remove('hidden');
+            });
+            closeDrawerBtn.addEventListener('click', () => {
+                mobileDrawer.classList.add('hidden');
+            });
+            mobileDrawer.addEventListener('click', (e) => {
+                if (e.target === mobileDrawer) {
+                    mobileDrawer.classList.add('hidden');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

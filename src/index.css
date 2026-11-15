@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@theme {
+  --color-darkBg: #050C1D;
+  --color-cardBg: #09142C;
+  --color-cardHover: #0E1D3D;
+  --color-accentBlue: #19C8FF;
+  --color-royalBlue: #0066FF;
+  --color-accentPurple: #8B5CF6;
+  --color-borderSubtle: #172B54;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+    background-color: #050C1D;
+    background-image:
+      radial-gradient(ellipse 75% 50% at 72% 14%, rgba(0, 128, 255, 0.2), transparent 65%),
+      radial-gradient(ellipse 50% 45% at 15% 85%, rgba(56, 189, 248, 0.08), transparent 60%);
+    background-attachment: fixed;
+    color: #F8FAFC;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050C1D;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1B315E;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #284682;
+}
+
+.glass-card {
+  background: linear-gradient(145deg, rgba(11, 22, 48, 0.92) 0%, rgba(7, 15, 34, 0.88) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.14);
+  backdrop-filter: blur(14px);
+}
+
+.hero-glass {
+  background: linear-gradient(135deg, rgba(8, 19, 44, 0.94) 0%, rgba(6, 14, 34, 0.9) 55%, rgba(9, 26, 62, 0.92) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  box-shadow: 0 18px 50px -15px rgba(0, 112, 255, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.glow-effect {
+  box-shadow: 0 0 32px rgba(0, 136, 255, 0.2);
+}
+
+.glow-purple {
+  box-shadow: 0 10px 35px -8px rgba(124, 58, 237, 0.35);
+}
+
+.btn-royal {
+  background: linear-gradient(90deg, #005CE6 0%, #0088FF 100%);
+  box-shadow: 0 6px 22px -4px rgba(0, 128, 255, 0.55);
+}
+
+.btn-royal:hover {
+  filter: brightness(1.08);
+}
+
+@keyframes slow-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-slow-spin {
+  animation: slow-spin 28s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slow-spin {
+    animation: none;
+  }
+}
