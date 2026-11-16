@@ -67,6 +67,7 @@ interface SettingsViewProps {
   onToggleMatchBookmark: (id: string) => void;
   onRequestSignOut: () => void;
   onRequestDeleteAccount: () => void;
+  onRequireAuth?: (actionLabel: string) => void;
   onToast: (msg: string) => void;
 }
 
@@ -114,6 +115,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onToggleMatchBookmark,
   onRequestSignOut,
   onRequestDeleteAccount,
+  onRequireAuth,
   onToast,
 }) => {
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -169,6 +171,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setProfileStatus(null);
+    if (!authenticatedUser) {
+      onRequireAuth?.('save profile changes');
+      return;
+    }
     if (editName.trim().length < 2) {
       setProfileStatus({ type: 'error', text: 'Display name must be at least 2 characters.' });
       return;
@@ -315,6 +321,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
+      {!authenticatedUser && (
+        <div className="p-4 rounded-2xl bg-sky-500/10 border border-sky-400/35 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="text-xs text-slate-200 leading-relaxed">
+            <strong className="text-[#38BDF8]">Review Mode:</strong> You can review Settings, Help
+            &amp; Support, and Legal Policies freely. Sign in or create an account to edit profile
+            details, change credentials, or save preferences.
+          </div>
+          <button
+            type="button"
+            onClick={() => onRequireAuth?.('manage your account settings')}
+            className="px-4 py-2 rounded-xl btn-royal text-white text-xs font-bold shrink-0 cursor-pointer"
+          >
+            Sign In / Register
+          </button>
+        </div>
+      )}
+
       {/* Main Layout: Left Sidebar Nav + Content Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         <aside className="lg:col-span-4 xl:col-span-3 glass-card rounded-2xl p-2.5 space-y-1">
@@ -352,16 +375,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               className="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/[0.04] transition cursor-pointer"
             >
               <LogOut className="w-4 h-4 text-sky-400" />
-              <span>{authenticatedUser ? 'Sign Out' : 'Exit Preview / Sign In'}</span>
+              <span>{authenticatedUser ? 'Sign Out' : 'Sign In / Create Account'}</span>
             </button>
-            <button
-              type="button"
-              onClick={onRequestDeleteAccount}
-              className="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
-            >
-              <Trash2 className="w-4 h-4" />
-              <span>Delete Account</span>
-            </button>
+            {authenticatedUser && (
+              <button
+                type="button"
+                onClick={onRequestDeleteAccount}
+                className="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete Account</span>
+              </button>
+            )}
           </div>
         </aside>
 
@@ -529,7 +554,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => photoInputRef.current?.click()}
+                      onClick={() => {
+                        if (!authenticatedUser) {
+                          onRequireAuth?.('upload a profile photo');
+                          return;
+                        }
+                        photoInputRef.current?.click();
+                      }}
                       className="px-3 py-1.5 rounded-lg bg-[#0A1633] border border-[#1E386E] text-[11px] font-semibold text-[#38BDF8] flex items-center space-x-1.5 cursor-pointer"
                     >
                       <Camera className="w-3.5 h-3.5" />

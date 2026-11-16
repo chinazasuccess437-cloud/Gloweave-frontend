@@ -73,7 +73,22 @@ export type ProblemSolutionStatus =
   | 'Verification Required'
   | 'Solved';
 
+export type VerificationStatus =
+  | 'AI Identified'
+  | 'Awaiting Review'
+  | 'Verified'
+  | 'Rejected'
+  | 'More Evidence Required'
+  | 'Resolved';
+
+export type ImpactSeverityLevel = 'Low' | 'Medium' | 'High' | 'Critical';
+
 export type ResourceKind =
+  | 'Website URL'
+  | 'PDF Document'
+  | 'Research Paper / Report'
+  | 'Technical Documentation'
+  | 'Product / Service Website'
   | 'Startup'
   | 'Product'
   | 'Research'
@@ -83,11 +98,41 @@ export type ResourceKind =
 export type BatchProcessingStatus =
   | 'Queued for Batch'
   | 'Scheduled (Next Window)'
-  | 'Under AI Analysis';
+  | 'Under AI Analysis'
+  | 'Awaiting Backend Service'
+  | 'Failed';
+
+export type PdfExtractionStatus =
+  | 'Not Applicable'
+  | 'Awaiting Backend Service'
+  | 'Queued for Extraction'
+  | 'Extracting Text'
+  | 'OCR Processing'
+  | 'Extracted'
+  | 'Extraction Failed';
+
+export type OcrStatus =
+  | 'Not Required'
+  | 'Pending Detection'
+  | 'Awaiting Backend Service'
+  | 'OCR Queued'
+  | 'OCR Processing'
+  | 'OCR Complete'
+  | 'OCR Failed';
+
+export interface PdfDocumentMetadata {
+  fileName: string;
+  fileSizeBytes: number;
+  mimeType: string;
+  pageCount?: number;
+  previewObjectUrl?: string;
+  ocrRequested: boolean;
+}
 
 export interface ResourceSubmission {
   id: string;
-  url: string;
+  submissionFormat: 'url' | 'pdf';
+  url?: string;
   kind: ResourceKind;
   optionalContext?: string;
   country?: string;
@@ -96,15 +141,68 @@ export interface ResourceSubmission {
   batchWindow: string;
   etaLabel: string;
   progressPercent: number;
+  uploadProgress: number;
   status: BatchProcessingStatus;
+  pdfMeta?: PdfDocumentMetadata;
+  extractionStatus?: PdfExtractionStatus;
+  ocrStatus?: OcrStatus;
+  extractedPreviewText?: string | null;
+  errorMessage?: string;
+  backendSyncState: 'awaiting-backend' | 'synced' | 'error';
 }
 
 export interface AssessmentEvent {
   id: string;
   date: string;
-  actor: 'Gloweave AI Batch' | 'Verification Panel' | 'Community Evidence';
+  actor: 'Gloweave AI Batch' | 'Verification Panel' | 'Community Evidence' | 'Human Reviewer';
   status: string;
   note: string;
+}
+
+export interface AiProblemAnalysis {
+  explicitProblems: string[];
+  inferredProblems: string[];
+  unmetNeeds: string[];
+  affectedGroups: string[];
+  geographicRelevance: string;
+  impactLevel: ImpactSeverityLevel;
+  severityLevel: ImpactSeverityLevel;
+  existingSolutionsAndLimitations: string[];
+  aiGeneratedNote: string;
+}
+
+export type EvidenceType =
+  | 'Primary Report'
+  | 'Product Deployment'
+  | 'Peer-Reviewed Research'
+  | 'Technical Documentation'
+  | 'PDF Upload'
+  | 'Community Field Evidence';
+
+export interface EvidenceItem {
+  id: string;
+  relatedProblemId: string;
+  sourceUrl?: string;
+  documentName?: string;
+  sourceTitle: string;
+  extractedReferences: string[];
+  supportingEvidence: string;
+  evidenceType: EvidenceType;
+  reviewStatus: VerificationStatus;
+  isIndependentlyVerified: boolean;
+  reviewerNotes?: string;
+  submittedAt: string;
+}
+
+export interface VerificationFeedback {
+  id: string;
+  targetType: 'problem' | 'evidence' | 'solution' | 'match';
+  targetId: string;
+  reviewerName: string;
+  decision: VerificationStatus;
+  comment: string;
+  createdAt: string;
+  backendSyncState: 'awaiting-backend' | 'synced';
 }
 
 export interface ProblemItem {
@@ -121,13 +219,20 @@ export interface ProblemItem {
   sourceEvidence: {
     label: string;
     url: string;
-    sourceType: 'Research' | 'Startup' | 'Product' | 'Website' | 'Report';
+    sourceType: 'Research' | 'Startup' | 'Product' | 'Website' | 'Report' | 'PDF';
     discoveredAt: string;
   };
   views: string;
   viewsNum: number;
   status: 'High Priority' | 'Growing' | 'Trending';
   solutionStatus: ProblemSolutionStatus;
+  verificationStatus?: VerificationStatus;
+  severity?: ImpactSeverityLevel;
+  impact?: ImpactSeverityLevel;
+  resourceTypes?: ResourceKind[];
+  aiAnalysis?: AiProblemAnalysis;
+  evidences?: EvidenceItem[];
+  verificationHistory?: VerificationFeedback[];
   theme: 'energy' | 'healthcare' | 'agriculture' | 'water' | 'education';
   upvotes: number;
   solutionsCount: number;
@@ -144,16 +249,23 @@ export interface SolutionItem {
   name: string;
   tagline: string;
   description: string;
+  addressExplanation?: string;
   category: string;
   tags: string[];
-  usersCount: string;
-  usersNum: number;
   rating: number;
   reviewsCount: string;
   verified: boolean;
   status: SolutionStatus;
+  aiAssessmentStatus?:
+    | 'Pending Batch Assessment'
+    | 'AI Assessed (Unverified)'
+    | 'Insufficient Evidence';
+  humanReviewStatus?: VerificationStatus;
+  humanReviewerNotes?: string;
   evidenceUrl: string;
   evidenceSummary: string;
+  supportingDocumentName?: string;
+  supportingDocumentSizeBytes?: number;
   submittedAt: string;
   featured?: boolean;
   websiteUrl: string;
@@ -164,8 +276,9 @@ export interface SolutionItem {
   submittedByMe?: boolean;
 }
 
-export type MatchKind = 'startup' | 'product' | 'collaborator';
+export type MatchKind = 'startup' | 'product' | 'collaborator' | 'proposed-solution';
 export type MatchVerification = 'ai-suggested' | 'verified';
+export type MatchUserFeedback = 'helpful' | 'needs-evidence' | 'not-relevant';
 
 export interface MatchItem {
   id: string;
@@ -179,10 +292,24 @@ export interface MatchItem {
   country: string;
   rationale: string;
   sourceUrl?: string;
+  supportingEvidenceUrls?: string[];
   contributorId?: string;
   fitLabel: string;
   statusNote: string;
+  reviewStatus?: VerificationStatus;
+  userFeedback?: MatchUserFeedback | null;
+  userFeedbackNote?: string;
   bookmarked?: boolean;
+}
+
+export interface DiscoveryFilterState {
+  region: RegionFilter;
+  country: string;
+  industry: string;
+  problemCategory: string;
+  severity: 'All' | ImpactSeverityLevel;
+  verificationStatus: 'All' | VerificationStatus;
+  resourceType: 'All' | ResourceKind;
 }
 
 export interface StartupItem {
@@ -193,11 +320,12 @@ export interface StartupItem {
   stage: 'Seed' | 'Series A' | 'Series B' | 'Bootstrapped';
   region: Exclude<RegionFilter, 'Global'>;
   country: string;
-  users: string;
-  usersNum: number;
   description: string;
   submittedAt: string;
   submittedByMe?: boolean;
+  featuredByBackend?: boolean;
+  usefulnessScore?: number;
+  featuredReason?: string;
 }
 
 export interface ContributorItem {
@@ -229,6 +357,31 @@ export interface RegionInsight {
   regionGroup: Exclude<RegionFilter, 'Global'>;
 }
 
+export interface ChatLinkSummary {
+  status: 'idle' | 'loading' | 'ready' | 'awaiting-backend' | 'error';
+  pageTitle?: string;
+  summary?: string;
+  keyPoints?: string[];
+  errorMessage?: string;
+}
+
+export interface ChatAttachment {
+  id: string;
+  type: 'image' | 'pdf' | 'link';
+  url?: string;
+  title?: string;
+  fileSizeBytes?: number;
+  linkSummary?: ChatLinkSummary;
+}
+
+export interface ChatMessageItem {
+  id: string;
+  fromSelf: boolean;
+  text: string;
+  time: string;
+  attachments?: ChatAttachment[];
+}
+
 export interface MessageThread {
   id: string;
   senderName: string;
@@ -238,12 +391,7 @@ export interface MessageThread {
   timestamp: string;
   accentFrom: string;
   accentTo: string;
-  messages: {
-    id: string;
-    fromSelf: boolean;
-    text: string;
-    time: string;
-  }[];
+  messages: ChatMessageItem[];
 }
 
 export interface NotificationItem {

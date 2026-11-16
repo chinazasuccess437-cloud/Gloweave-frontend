@@ -13,17 +13,22 @@ import {
   Rocket,
   ShieldCheck,
   Sparkles,
+  ThumbsDown,
+  ThumbsUp,
   Users,
 } from 'lucide-react';
 import { CATEGORIES } from '../data/gloweaveData';
+import { isBackendConfigured } from '../lib/backendApi';
 import {
   ContributorItem,
   MatchItem,
   MatchKind,
+  MatchUserFeedback,
   MatchVerification,
   ProblemItem,
   RegionFilter,
 } from '../types/gloweave';
+import { verificationStatusBadge } from './ProblemDetailView';
 
 interface MatchesViewProps {
   matches: MatchItem[];
@@ -35,11 +40,12 @@ interface MatchesViewProps {
   onOpenSubmitResource: () => void;
   onOpenSubmitEvidence: (problemId?: string) => void;
   onToggleMatchBookmark: (matchId: string) => void;
+  onSubmitMatchFeedback?: (matchId: string, feedback: MatchUserFeedback, note?: string) => void;
   onToggleConnect: (contributorId: string) => void;
   onStartMessageWith: (person: ContributorItem) => void;
 }
 
-type MatchTab = 'all' | 'startup' | 'product' | 'collaborator' | 'unmatched';
+type MatchTab = 'all' | 'startup' | 'product' | 'proposed-solution' | 'collaborator' | 'unmatched';
 
 export const MatchesView: React.FC<MatchesViewProps> = ({
   matches,
@@ -51,6 +57,7 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
   onOpenSubmitResource,
   onOpenSubmitEvidence,
   onToggleMatchBookmark,
+  onSubmitMatchFeedback,
   onToggleConnect,
   onStartMessageWith,
 }) => {
@@ -58,6 +65,7 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
   const [verificationFilter, setVerificationFilter] = useState<'all' | MatchVerification>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [refreshing, setRefreshing] = useState(false);
+  const [feedbackDrafts, setFeedbackDrafts] = useState<Record<string, string>>({});
 
   const q = searchQuery.trim().toLowerCase();
 
@@ -106,12 +114,13 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
   const kindLabel = (kind: MatchKind) => {
     if (kind === 'startup') return 'Matched Startup';
     if (kind === 'product') return 'Existing Product';
+    if (kind === 'proposed-solution') return 'Proposed Solution';
     return 'Potential Collaborator';
   };
 
   const kindIcon = (kind: MatchKind) => {
     if (kind === 'startup') return Rocket;
-    if (kind === 'product') return Sparkles;
+    if (kind === 'product' || kind === 'proposed-solution') return Sparkles;
     return Users;
   };
 
@@ -231,6 +240,7 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
               { id: 'all', label: 'All Matches' },
               { id: 'startup', label: 'Matched Startups' },
               { id: 'product', label: 'Existing Products' },
+              { id: 'proposed-solution', label: 'Proposed Solutions' },
               { id: 'collaborator', label: 'Collaborators' },
               { id: 'unmatched', label: `Unmatched Problems (${unmatchedProblems.length})` },
             ] as const
@@ -414,7 +424,111 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
                           )}
 
                           <p className="text-xs text-slate-300 leading-relaxed">{match.rationale}</p>
-                          <p className="text-[11px] text-slate-400">{match.statusNote}</p>
+
+                          {/* Supporting Evidence Links */}
+                          {(match.sourceUrl ||
+                            (match.supportingEvidenceUrls && match.supportingEvidenceUrls.length > 0)) && (
+                            <div className="p-2.5 rounded-xl bg-[#040A1A]/75 border border-[#1E386E] flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                              <span className="text-slate-400">Supporting Evidence</span>
+                              <div className="flex flex-wrap gap-2">
+                                {match.sourceUrl && (
+                                  <a
+                                    href={match.sourceUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-[#38BDF8] font-semibold hover:underline flex items-center space-x-1"
+                                  >
+                                    <span>Primary Source</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                )}
+                                {match.supportingEvidenceUrls?.map((evUrl, idx) => (
+                                  <a
+                                    key={evUrl + idx}
+                                    href={evUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-sky-300 font-semibold hover:underline flex items-center space-x-1"
+                                  >
+                                    <span>Evidence #{idx + 1}</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+                            <span>{match.statusNote}</span>
+                            {match.reviewStatus && (
+                              <span
+                                className={`px-2 py-0.5 rounded border text-[10px] font-bold ${verificationStatusBadge(
+                                  match.reviewStatus
+                                )}`}
+                              >
+                                {match.reviewStatus}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Match User Feedback & Review */}
+                          {onSubmitMatchFeedback && (
+                            <div className="p-3 rounded-xl bg-[#040A1A]/70 border border-[#1E386E] space-y-2 text-[11px]">
+                              <div className="flex items-center justify-between text-slate-400">
+                                <span className="font-semibold text-slate-300">
+                                  User Feedback &amp; Match Review
+                                </span>
+                                <span>
+                                  {isBackendConfigured() ? 'Backend sync active' : 'Session feedback'}
+                                </span>
+                              </div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {(
+                                  [
+                                    { id: 'helpful', label: 'Helpful Match', icon: ThumbsUp },
+                                    { id: 'needs-evidence', label: 'Needs Evidence', icon: AlertCircle },
+                                    { id: 'not-relevant', label: 'Not Relevant', icon: ThumbsDown },
+                                  ] as const
+                                ).map((opt) => {
+                                  const FeedbackIcon = opt.icon;
+                                  const selected = match.userFeedback === opt.id;
+                                  return (
+                                    <button
+                                      key={opt.id}
+                                      type="button"
+                                      onClick={() =>
+                                        onSubmitMatchFeedback(
+                                          match.id,
+                                          opt.id,
+                                          feedbackDrafts[match.id]?.trim() || undefined
+                                        )
+                                      }
+                                      className={`px-2.5 py-1 rounded-lg border text-[10px] font-bold flex items-center space-x-1 transition cursor-pointer ${
+                                        selected
+                                          ? 'bg-[#0D2B63] border-sky-400 text-white'
+                                          : 'bg-[#091533] border-[#1E386E] text-slate-300 hover:border-sky-400/50'
+                                      }`}
+                                    >
+                                      <FeedbackIcon className="w-3 h-3" />
+                                      <span>{opt.label}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <input
+                                type="text"
+                                value={feedbackDrafts[match.id] ?? match.userFeedbackNote ?? ''}
+                                onChange={(e) =>
+                                  setFeedbackDrafts((prev) => ({
+                                    ...prev,
+                                    [match.id]: e.target.value,
+                                  }))
+                                }
+                                placeholder="Optional reviewer note on match accuracy..."
+                                className="w-full bg-[#091533] border border-[#1E386E] rounded-lg px-2.5 py-1.5 text-[11px] text-white placeholder:text-slate-500 focus:outline-none focus:border-sky-400"
+                              />
+                            </div>
+                          )}
                         </div>
 
                         {/* Actions */}

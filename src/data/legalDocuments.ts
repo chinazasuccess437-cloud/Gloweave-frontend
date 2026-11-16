@@ -277,7 +277,7 @@ export const ABOUT_GLOWEAVE = {
   tagline: 'Discover • Connect • Innovate',
   summary:
     'Gloweave is an AI-powered global problem discovery, batch analysis, and solution-matching platform connecting real-world challenges with startups, products, research, and collaborators across every region.',
-  version: 'Frontend Evolution · Build 2026.11',
+  version: 'Gloweave v1.2.4',
   workflowSteps: [
     'Submit links to startups, products, research, or websites with optional context.',
     'Gloweave queues submissions into scheduled batches targeting a 24–48-hour turnaround.',

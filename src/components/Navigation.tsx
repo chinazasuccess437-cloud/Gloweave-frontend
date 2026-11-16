@@ -10,6 +10,7 @@ import {
   LifeBuoy,
   Lightbulb,
   LineChart,
+  LogIn,
   LogOut,
   Menu,
   MessageSquare,
@@ -25,6 +26,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { CONTINENTS } from '../data/countries';
 import { NavView, RegionFilter } from '../types/gloweave';
 import { AvatarBadge } from './VisualThumbnails';
@@ -74,10 +76,10 @@ export const DesktopSidebar: React.FC<SidebarProps> = ({
         <button
           type="button"
           onClick={() => onSelectView('home')}
-          className="w-full p-5 flex items-center space-x-3 border-b border-[#172B54]/60 text-left hover:bg-white/[0.02] transition"
+          className="w-full p-5 flex items-center space-x-3 border-b border-[#172B54]/60 text-left hover:bg-white/[0.02] transition group cursor-pointer"
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0066FF] to-[#19C8FF] flex items-center justify-center shadow-[0_0_18px_rgba(25,200,255,0.4)] shrink-0">
-            <Globe className="w-5 h-5 text-white" />
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0066FF] to-[#19C8FF] flex items-center justify-center shadow-[0_0_18px_rgba(25,200,255,0.4)] shrink-0 transition-transform duration-300 group-hover:scale-105">
+            <Globe className="w-5 h-5 text-white transition-transform duration-500 group-hover:rotate-45" />
           </div>
           <div className="min-w-0">
             <h1 className="font-extrabold text-lg tracking-tight text-white">
@@ -180,11 +182,17 @@ export const DesktopSidebar: React.FC<SidebarProps> = ({
             />
             <div className="min-w-0">
               <h4 className="text-xs font-bold text-white truncate">
-                {profileName || 'Your Profile'}
+                {isAuthenticated ? profileName || 'Your Profile' : 'Guest Reviewer'}
               </h4>
-              <p className="text-[10px] text-emerald-400 font-medium flex items-center space-x-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                <span>{isPro ? 'Pro Member' : 'Member'}</span>
+              <p className="text-[10px] font-medium flex items-center space-x-1">
+                <span
+                  className={`w-1.5 h-1.5 rounded-full inline-block ${
+                    isAuthenticated ? 'bg-emerald-400' : 'bg-sky-400'
+                  }`}
+                />
+                <span className={isAuthenticated ? 'text-emerald-400' : 'text-sky-300'}>
+                  {isAuthenticated ? (isPro ? 'Pro Member' : 'Member') : 'Review Mode'}
+                </span>
               </p>
             </div>
           </button>
@@ -252,10 +260,18 @@ export const DesktopSidebar: React.FC<SidebarProps> = ({
           <button
             type="button"
             onClick={onSignOut}
-            className="w-full flex items-center space-x-2 text-slate-400 hover:text-rose-300 px-2 py-1.5 rounded-lg hover:bg-white/5 transition cursor-pointer"
+            className={`w-full flex items-center space-x-2 px-2 py-1.5 rounded-lg transition cursor-pointer ${
+              isAuthenticated
+                ? 'text-slate-400 hover:text-rose-300 hover:bg-white/5'
+                : 'text-[#38BDF8] bg-sky-500/10 border border-sky-400/25 hover:bg-sky-500/20 font-semibold'
+            }`}
           >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>{isAuthenticated ? 'Sign Out' : 'Register / Sign In'}</span>
+            {isAuthenticated ? (
+              <LogOut className="w-3.5 h-3.5" />
+            ) : (
+              <LogIn className="w-3.5 h-3.5" />
+            )}
+            <span>{isAuthenticated ? 'Sign Out' : 'Sign In / Register'}</span>
           </button>
         </div>
       </div>
@@ -269,10 +285,13 @@ interface DesktopHeaderProps {
   region: RegionFilter;
   onRegionChange: (r: RegionFilter) => void;
   unreadNotifications: number;
+  isAuthenticated: boolean;
   profileName: string;
   profilePhotoUrl: string | null;
   onOpenNotifications: () => void;
   onOpenProfile: () => void;
+  onOpenSignIn: () => void;
+  onOpenRegister: () => void;
 }
 
 const REGIONS: RegionFilter[] = ['Global', ...CONTINENTS];
@@ -283,10 +302,13 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   region,
   onRegionChange,
   unreadNotifications,
+  isAuthenticated,
   profileName,
   profilePhotoUrl,
   onOpenNotifications,
   onOpenProfile,
+  onOpenSignIn,
+  onOpenRegister,
 }) => {
   const [regionOpen, setRegionOpen] = useState(false);
 
@@ -362,23 +384,42 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
           )}
         </button>
 
-        <button
-          type="button"
-          onClick={onOpenProfile}
-          className="flex items-center space-x-2.5 pl-3 border-l border-[#172B54] hover:opacity-90 transition cursor-pointer"
-        >
-          <AvatarBadge
-            photoUrl={profilePhotoUrl}
-            alt={profileName || 'Profile picture'}
-            size="sm"
-            accentFrom="#0066FF"
-            accentTo="#22D3EE"
-          />
-          <span className="text-xs font-bold text-white whitespace-nowrap">
-            {profileName ? profileName.split(' ')[0] : 'Profile'}
-          </span>
-          <ChevronDown className="w-3 h-3 text-slate-400" />
-        </button>
+        {isAuthenticated ? (
+          <button
+            type="button"
+            onClick={onOpenProfile}
+            className="flex items-center space-x-2.5 pl-3 border-l border-[#172B54] hover:opacity-90 transition cursor-pointer"
+          >
+            <AvatarBadge
+              photoUrl={profilePhotoUrl}
+              alt={profileName || 'Profile picture'}
+              size="sm"
+              accentFrom="#0066FF"
+              accentTo="#22D3EE"
+            />
+            <span className="text-xs font-bold text-white whitespace-nowrap">
+              {profileName ? profileName.split(' ')[0] : 'Profile'}
+            </span>
+            <ChevronDown className="w-3 h-3 text-slate-400" />
+          </button>
+        ) : (
+          <div className="flex items-center space-x-2 pl-3 border-l border-[#172B54]">
+            <button
+              type="button"
+              onClick={onOpenSignIn}
+              className="px-3.5 py-2 rounded-xl bg-[#0A1633] border border-sky-400/35 text-xs font-bold text-[#38BDF8] hover:bg-[#11244D] transition cursor-pointer whitespace-nowrap"
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={onOpenRegister}
+              className="px-3.5 py-2 rounded-xl btn-royal text-xs font-bold text-white transition cursor-pointer whitespace-nowrap"
+            >
+              Get Started
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );
@@ -400,13 +441,22 @@ interface MobileChromeProps {
 export const MobileHeader: React.FC<{
   onOpenMenu: () => void;
   unreadNotifications: number;
+  isAuthenticated: boolean;
   onOpenNotifications: () => void;
   onGoHome: () => void;
-}> = ({ onOpenMenu, unreadNotifications, onOpenNotifications, onGoHome }) => (
+  onOpenSignIn: () => void;
+}> = ({
+  onOpenMenu,
+  unreadNotifications,
+  isAuthenticated,
+  onOpenNotifications,
+  onGoHome,
+  onOpenSignIn,
+}) => (
   <header className="md:hidden sticky top-0 z-40 bg-[#050C1D]/95 backdrop-blur border-b border-[#172B54]/80 px-4 py-3 flex items-center justify-between">
-    <button type="button" onClick={onGoHome} className="flex items-center space-x-2.5 text-left">
-      <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0066FF] to-[#19C8FF] flex items-center justify-center shadow-[0_0_16px_rgba(25,200,255,0.4)]">
-        <Globe className="w-5 h-5 text-white" />
+    <button type="button" onClick={onGoHome} className="flex items-center space-x-2.5 text-left group">
+      <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0066FF] to-[#19C8FF] flex items-center justify-center shadow-[0_0_16px_rgba(25,200,255,0.4)] transition-transform duration-300 group-hover:scale-105">
+        <Globe className="w-5 h-5 text-white transition-transform duration-500 group-hover:rotate-45" />
       </div>
       <div>
         <h1 className="font-extrabold text-lg tracking-tight text-white">
@@ -417,7 +467,16 @@ export const MobileHeader: React.FC<{
         </p>
       </div>
     </button>
-    <div className="flex items-center space-x-2.5">
+    <div className="flex items-center space-x-2">
+      {!isAuthenticated && (
+        <button
+          type="button"
+          onClick={onOpenSignIn}
+          className="px-3 py-2 rounded-xl btn-royal text-white text-[11px] font-bold whitespace-nowrap"
+        >
+          Sign In
+        </button>
+      )}
       <button
         type="button"
         onClick={onOpenNotifications}
@@ -519,8 +578,6 @@ export const MobileDrawer: React.FC<
   onOpenUpgrade,
   onSignOut,
 }) => {
-  if (!open) return null;
-
   const links: { id: NavView; label: string }[] = [
     { id: 'home', label: 'Home' },
     { id: 'discover', label: 'Discover' },
@@ -540,17 +597,27 @@ export const MobileDrawer: React.FC<
   ];
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md md:hidden"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Mobile menu"
-    >
-      <div
-        className="absolute right-0 top-0 bottom-0 w-4/5 max-w-xs bg-[#060B18] border-l border-[#172B54] p-5 flex flex-col justify-between overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md md:hidden"
+          onClick={onClose}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mobile menu"
+        >
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute right-0 top-0 bottom-0 w-4/5 max-w-xs bg-[#060B18] border-l border-[#172B54] p-5 flex flex-col justify-between overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
         <div>
           <div className="flex items-center justify-between pb-4 border-b border-[#172B54] mb-4">
             <div className="flex items-center space-x-2.5">
@@ -608,10 +675,10 @@ export const MobileDrawer: React.FC<
             />
             <div className="min-w-0">
               <div className="font-bold text-sm text-white truncate">
-                {profileName || 'Your Profile'}
+                {isAuthenticated ? profileName || 'Your Profile' : 'Guest Reviewer'}
               </div>
-              <div className="text-xs text-emerald-400">
-                {isPro ? 'Pro Member' : 'Member'}
+              <div className={`text-xs ${isAuthenticated ? 'text-emerald-400' : 'text-sky-300'}`}>
+                {isAuthenticated ? (isPro ? 'Pro Member' : 'Member') : 'Review Mode'}
               </div>
             </div>
           </button>
@@ -631,13 +698,23 @@ export const MobileDrawer: React.FC<
               onClose();
               onSignOut();
             }}
-            className="w-full flex items-center justify-center space-x-2 py-2 rounded-xl bg-[#0A1633] border border-[#1E386E] text-xs font-semibold text-slate-300 hover:text-rose-300 transition cursor-pointer"
+            className={`w-full flex items-center justify-center space-x-2 py-2 rounded-xl border text-xs font-semibold transition cursor-pointer ${
+              isAuthenticated
+                ? 'bg-[#0A1633] border-[#1E386E] text-slate-300 hover:text-rose-300'
+                : 'bg-sky-500/15 border-sky-400/35 text-[#38BDF8] hover:bg-sky-500/25'
+            }`}
           >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>{isAuthenticated ? 'Sign Out' : 'Register / Sign In'}</span>
+            {isAuthenticated ? (
+              <LogOut className="w-3.5 h-3.5" />
+            ) : (
+              <LogIn className="w-3.5 h-3.5" />
+            )}
+            <span>{isAuthenticated ? 'Sign Out' : 'Sign In / Register'}</span>
           </button>
         </div>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

@@ -2,21 +2,28 @@ import React, { useState } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
+  Award,
+  Building2,
   Check,
   Clock,
   Crown,
+  ExternalLink,
   Flame,
   Globe,
   Lightbulb,
   Loader2,
+  MapPin,
   Network,
   Rocket,
   ShieldCheck,
   Sparkles,
   Star,
+  Users,
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { HERO_STATS, KPI_METRICS } from '../data/gloweaveData';
 import {
+  ContributorItem,
   MatchItem,
   NavView,
   ProblemItem,
@@ -24,6 +31,7 @@ import {
   ResourceKind,
   ResourceSubmission,
   SolutionItem,
+  StartupItem,
 } from '../types/gloweave';
 import { problemSolutionStatusBadge } from './ProblemDetailView';
 import {
@@ -39,12 +47,16 @@ interface HomeDashboardProps {
   solutions: SolutionItem[];
   matches: MatchItem[];
   submissions: ResourceSubmission[];
+  startups: StartupItem[];
+  contributors: ContributorItem[];
   featuredSolution: SolutionItem | null;
   regions: RegionInsight[];
   isPro: boolean;
+  isAuthenticated?: boolean;
   profileName?: string;
+  profileLocation?: string;
   onNavigate: (view: NavView) => void;
-  onOpenSubmit: (opts?: { kind?: 'resource' | 'evidence'; prefillUrl?: string; problemId?: string }) => void;
+  onOpenSubmit: (opts?: { kind?: 'resource' | 'pdf' | 'evidence'; prefillUrl?: string; problemId?: string }) => void;
   onOpenUpgrade: () => void;
   onSelectProblem: (problem: ProblemItem) => void;
   onSelectSolution: (solution: SolutionItem) => void;
@@ -64,10 +76,14 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
   solutions,
   matches,
   submissions,
+  startups,
+  contributors,
   featuredSolution,
   regions,
   isPro,
+  isAuthenticated,
   profileName,
+  profileLocation,
   onNavigate,
   onOpenSubmit,
   onOpenUpgrade,
@@ -80,6 +96,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
   const [quickSubmitting, setQuickSubmitting] = useState(false);
   const [problemTab, setProblemTab] = useState<'discovered' | 'awaiting'>('discovered');
   const [selectedRegionId, setSelectedRegionId] = useState(regions[0]?.id || 'reg-af');
+  const [showAllCountries, setShowAllCountries] = useState(false);
   const [urlError, setUrlError] = useState('');
 
   const awaitingProblems = problems.filter((p) => p.solutionStatus === 'Awaiting Solution');
@@ -87,6 +104,32 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
     (s) => s.verified || s.status === 'Fully solved' || s.status === 'Partially solved'
   );
   const displayedProblems = (problemTab === 'awaiting' ? awaitingProblems : problems).slice(0, 3);
+
+  const startupsCount = startups.length;
+  const usersCount =
+    contributors.length + (isAuthenticated || Boolean(profileName?.trim()) ? 1 : 0);
+  const uniqueCountries = Array.from(
+    new Set(
+      [
+        ...contributors.map((c) => c.country),
+        ...startups.map((s) => s.country),
+        ...problems.map((p) => p.country),
+        ...solutions.map((s) => s.country),
+        ...matches.map((m) => m.country),
+        ...(profileLocation ? [profileLocation] : []),
+      ]
+        .map((c) => c.trim())
+        .filter(Boolean)
+    )
+  ).sort();
+  const countriesCount = uniqueCountries.length;
+  const sectorsCount = new Set(startups.map((s) => s.sector).filter(Boolean)).size;
+  const solversCount = contributors.filter((c) => c.kind === 'solver').length;
+  const innovatorsCount = contributors.filter((c) => c.kind === 'innovator').length;
+  const featuredStartups = startups
+    .filter((s) => s.featuredByBackend)
+    .sort((a, b) => (b.usefulnessScore || 0) - (a.usefulnessScore || 0))
+    .slice(0, 3);
   const topThreeMatches = matches.slice(0, 3);
   const activeRegion = regions.find((r) => r.id === selectedRegionId) || regions[0];
   const latestVerified =
@@ -138,6 +181,11 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
     }
 
     setUrlError('');
+    if (!isAuthenticated) {
+      onQuickUrlSubmit(candidate, quickKind);
+      return;
+    }
+
     setQuickSubmitting(true);
     window.setTimeout(() => {
       onQuickUrlSubmit(candidate, quickKind);
@@ -208,6 +256,90 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                 </button>
               );
             })}
+          </div>
+        </section>
+
+        {/* Mobile Live Ecosystem Footprint: Startups, Users & Countries */}
+        <section className="relative overflow-hidden rounded-2xl glass-card p-4 border border-sky-400/25 space-y-3">
+          <div
+            className="pointer-events-none absolute -top-12 -right-10 w-36 h-36 rounded-full bg-cyan-400/15 blur-2xl"
+            aria-hidden="true"
+          />
+          <div className="relative z-10 flex items-center justify-between gap-2">
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 rounded-lg bg-sky-500/20 border border-sky-400/35 text-[#38BDF8] flex items-center justify-center">
+                <Globe className="w-3.5 h-3.5" />
+              </div>
+              <h3 className="font-bold text-sm text-white">Inside Gloweave</h3>
+            </div>
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-cyan-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Live Network
+            </span>
+          </div>
+
+          <div className="relative z-10 grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => onNavigate('startups')}
+              className="text-left p-3 rounded-xl bg-gradient-to-br from-[#0B1E47] to-[#07122D] border border-sky-400/25 hover:border-sky-400/50 transition"
+            >
+              <div className="w-7 h-7 rounded-lg bg-sky-500/20 border border-sky-400/35 text-[#38BDF8] flex items-center justify-center mb-2">
+                <Building2 className="w-3.5 h-3.5" />
+              </div>
+              <div className="text-xl font-extrabold text-white tabular-nums leading-none">
+                {startupsCount}
+              </div>
+              <div className="text-[10px] font-semibold text-slate-300 mt-1">Startups</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigate('community')}
+              className="text-left p-3 rounded-xl bg-gradient-to-br from-[#101C48] to-[#08122D] border border-indigo-400/25 hover:border-indigo-400/50 transition"
+            >
+              <div className="w-7 h-7 rounded-lg bg-indigo-500/20 border border-indigo-400/35 text-indigo-300 flex items-center justify-center mb-2">
+                <Users className="w-3.5 h-3.5" />
+              </div>
+              <div className="text-xl font-extrabold text-white tabular-nums leading-none">
+                {usersCount}
+              </div>
+              <div className="text-[10px] font-semibold text-slate-300 mt-1">Users</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigate('distribution')}
+              className="text-left p-3 rounded-xl bg-gradient-to-br from-[#0A243E] to-[#07142C] border border-emerald-400/25 hover:border-emerald-400/50 transition"
+            >
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-400/35 text-emerald-300 flex items-center justify-center mb-2">
+                <MapPin className="w-3.5 h-3.5" />
+              </div>
+              <div className="text-xl font-extrabold text-white tabular-nums leading-none">
+                {countriesCount}
+              </div>
+              <div className="text-[10px] font-semibold text-slate-300 mt-1">Countries</div>
+            </button>
+          </div>
+
+          <div className="relative z-10 flex flex-wrap items-center gap-1.5 pt-1">
+            {uniqueCountries.slice(0, 6).map((country) => (
+              <span
+                key={country}
+                className="px-2 py-0.5 rounded-md bg-[#091738] border border-[#1E3A6E] text-[10px] font-medium text-slate-300"
+              >
+                {country}
+              </span>
+            ))}
+            {uniqueCountries.length > 6 && (
+              <button
+                type="button"
+                onClick={() => onNavigate('distribution')}
+                className="px-2 py-0.5 rounded-md bg-sky-500/15 border border-sky-400/30 text-[10px] font-bold text-[#38BDF8]"
+              >
+                +{uniqueCountries.length - 6} more
+              </button>
+            )}
           </div>
         </section>
 
@@ -380,6 +512,55 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
             </div>
           )}
         </section>
+
+        {/* Mobile Featured Startups (Backend-Ranked by Usefulness) */}
+        <section className="glass-card p-4 rounded-2xl border border-amber-400/20 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center space-x-2">
+              <Award className="w-4 h-4 text-amber-400" />
+              <h3 className="font-bold text-sm text-white">Featured Startups</h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => onNavigate('startups')}
+              className="text-xs text-[#38BDF8] font-semibold"
+            >
+              All ({startupsCount}) →
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-400 leading-snug">
+            Selected automatically by backend usefulness &amp; verified impact — never self-featured.
+          </p>
+          {featuredStartups.length === 0 ? (
+            <div className="p-4 rounded-xl bg-[#0B1734]/85 border border-[#1D3668]/60 text-center">
+              <p className="text-xs text-slate-400">Awaiting backend usefulness ranking</p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {featuredStartups.map((st) => (
+                <div
+                  key={st.id}
+                  className="p-3 rounded-xl bg-[#0B1734]/85 border border-[#1D3668]/70 space-y-1.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="text-xs font-bold text-white truncate">{st.name}</h4>
+                    {typeof st.usefulnessScore === 'number' && (
+                      <span className="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-400/35 text-[10px] font-bold text-amber-300 shrink-0 tabular-nums">
+                        {st.usefulnessScore}% Useful
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-[#38BDF8]">
+                    {st.sector} · {st.stage} · {st.country}
+                  </p>
+                  {st.featuredReason && (
+                    <p className="text-[10px] text-slate-300 leading-relaxed">{st.featuredReason}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
       {/* =================================================
@@ -465,7 +646,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
 
         {/* 4 KPI Metrics Row with Smooth Glowing SVG Sparklines */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {liveKpiMetrics.map((kpi) => {
+          {liveKpiMetrics.map((kpi, idx) => {
             const colorMap = {
               purple: {
                 box: 'bg-purple-500/20 border-purple-400/35 text-purple-300',
@@ -496,11 +677,14 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
             const Icon = colorMap.Icon;
 
             return (
-              <button
+              <motion.button
                 key={kpi.id}
                 type="button"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.24, delay: idx * 0.04, ease: [0.16, 1, 0.3, 1] }}
                 onClick={() => onNavigate(colorMap.target)}
-                className="text-left glass-card px-4 py-3.5 rounded-2xl flex items-center justify-between gap-2 hover:border-sky-400/35 transition cursor-pointer"
+                className="text-left glass-card glass-card-interactive px-4 py-3.5 rounded-2xl flex items-center justify-between gap-2 cursor-pointer"
               >
                 <div className="flex items-center space-x-3 min-w-0">
                   <div
@@ -519,10 +703,190 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                   </div>
                 </div>
                 <GlowingSparkline id={kpi.id} points={kpi.bars} color={colorMap.stroke} />
-              </button>
+              </motion.button>
             );
           })}
         </div>
+
+        {/* Live Ecosystem Footprint Showcase: Startups, Users & Countries */}
+        <section className="relative overflow-hidden rounded-3xl glass-card border border-sky-400/25 p-5 lg:p-6">
+          <div
+            className="pointer-events-none absolute -top-20 left-1/4 w-72 h-40 rounded-full bg-[#0066FF]/15 blur-3xl"
+            aria-hidden="true"
+          />
+          <div
+            className="pointer-events-none absolute -bottom-16 right-12 w-64 h-40 rounded-full bg-[#22D3EE]/12 blur-3xl"
+            aria-hidden="true"
+          />
+
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0066FF]/30 to-[#22D3EE]/25 border border-sky-400/35 text-[#38BDF8] flex items-center justify-center shrink-0 shadow-[0_0_24px_rgba(34,211,238,0.2)]">
+                <Globe className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-base text-white tracking-tight">
+                    Global Network Footprint
+                  </h3>
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-400/30 text-[10px] font-bold text-emerald-300">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Live Inside Gloweave
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Real-time count of startups, active community users, and represented countries across the platform
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onNavigate('distribution')}
+              className="self-start lg:self-auto px-3.5 py-2 rounded-xl bg-[#0B1B40]/90 border border-sky-400/30 hover:border-sky-300/60 text-xs font-bold text-[#38BDF8] flex items-center space-x-1.5 transition cursor-pointer shrink-0"
+            >
+              <span>Explore Regional Map</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Startups Counter Card */}
+            <motion.button
+              type="button"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.24, delay: 0.04, ease: [0.16, 1, 0.3, 1] }}
+              onClick={() => onNavigate('startups')}
+              className="group relative overflow-hidden text-left p-5 rounded-2xl bg-gradient-to-br from-[#0B1D47]/95 via-[#081535]/95 to-[#061028]/95 border border-sky-400/25 hover:border-sky-300/60 glass-card-interactive cursor-pointer"
+            >
+              <div
+                className="pointer-events-none absolute -top-10 -right-10 w-28 h-28 rounded-full bg-[#38BDF8]/15 blur-2xl group-hover:bg-[#38BDF8]/25 transition"
+                aria-hidden="true"
+              />
+              <div className="relative z-10 flex items-start justify-between gap-3">
+                <div className="space-y-2">
+                  <div className="inline-flex items-center space-x-2 text-xs font-bold text-sky-300">
+                    <Building2 className="w-4 h-4" />
+                    <span>Startups Indexed</span>
+                  </div>
+                  <div className="text-4xl font-black text-white tabular-nums tracking-tight">
+                    {startupsCount}
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-snug">
+                    Active ventures across <span className="text-slate-200 font-semibold">{sectorsCount}</span> innovation sectors
+                  </p>
+                </div>
+                <div className="w-11 h-11 rounded-2xl bg-sky-500/15 border border-sky-400/35 text-[#38BDF8] flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                  <Rocket className="w-5 h-5" />
+                </div>
+              </div>
+              <div className="relative z-10 mt-3 pt-2.5 border-t border-sky-400/15 flex items-center justify-between text-[11px] font-semibold text-[#38BDF8]">
+                <span>Browse Startup Directory</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition" />
+              </div>
+            </motion.button>
+
+            {/* Users / Innovators Counter Card */}
+            <motion.button
+              type="button"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.24, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
+              onClick={() => onNavigate('community')}
+              className="group relative overflow-hidden text-left p-5 rounded-2xl bg-gradient-to-br from-[#121C4B]/95 via-[#091436]/95 to-[#061028]/95 border border-indigo-400/25 hover:border-indigo-300/60 glass-card-interactive cursor-pointer"
+            >
+              <div
+                className="pointer-events-none absolute -top-10 -right-10 w-28 h-28 rounded-full bg-indigo-400/15 blur-2xl group-hover:bg-indigo-400/25 transition"
+                aria-hidden="true"
+              />
+              <div className="relative z-10 flex items-start justify-between gap-3">
+                <div className="space-y-2">
+                  <div className="inline-flex items-center space-x-2 text-xs font-bold text-indigo-300">
+                    <Users className="w-4 h-4" />
+                    <span>Users &amp; Contributors</span>
+                  </div>
+                  <div className="text-4xl font-black text-white tabular-nums tracking-tight">
+                    {usersCount}
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-snug tabular-nums">
+                    <span className="text-slate-200 font-semibold">{solversCount}</span> problem solvers ·{' '}
+                    <span className="text-slate-200 font-semibold">{innovatorsCount}</span> innovators
+                  </p>
+                </div>
+                <div className="w-11 h-11 rounded-2xl bg-indigo-500/15 border border-indigo-400/35 text-indigo-300 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                  <Users className="w-5 h-5" />
+                </div>
+              </div>
+              <div className="relative z-10 mt-3 pt-2.5 border-t border-indigo-400/15 flex items-center justify-between text-[11px] font-semibold text-indigo-300">
+                <span>Connect with Community</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition" />
+              </div>
+            </motion.button>
+
+            {/* Countries Counter Card */}
+            <motion.button
+              type="button"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.24, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
+              onClick={() => onNavigate('distribution')}
+              className="group relative overflow-hidden text-left p-5 rounded-2xl bg-gradient-to-br from-[#09243E]/95 via-[#071632]/95 to-[#061028]/95 border border-emerald-400/25 hover:border-emerald-300/60 glass-card-interactive cursor-pointer"
+            >
+              <div
+                className="pointer-events-none absolute -top-10 -right-10 w-28 h-28 rounded-full bg-emerald-400/15 blur-2xl group-hover:bg-emerald-400/25 transition"
+                aria-hidden="true"
+              />
+              <div className="relative z-10 flex items-start justify-between gap-3">
+                <div className="space-y-2">
+                  <div className="inline-flex items-center space-x-2 text-xs font-bold text-emerald-300">
+                    <MapPin className="w-4 h-4" />
+                    <span>Countries Represented</span>
+                  </div>
+                  <div className="text-4xl font-black text-white tabular-nums tracking-tight">
+                    {countriesCount}
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-snug tabular-nums">
+                    Spanning <span className="text-slate-200 font-semibold">{regions.length}</span> global continental regions
+                  </p>
+                </div>
+                <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-400/35 text-emerald-300 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                  <Globe className="w-5 h-5" />
+                </div>
+              </div>
+              <div className="relative z-10 mt-3 pt-2.5 border-t border-emerald-400/15 flex items-center justify-between text-[11px] font-semibold text-emerald-300">
+                <span>View Country Distribution</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition" />
+              </div>
+            </motion.button>
+          </div>
+
+          {/* Represented Countries Ribbon */}
+          {uniqueCountries.length > 0 && (
+            <div className="relative z-10 mt-4 pt-3.5 border-t border-[#1E386E]/60 flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1.5">
+                Active Countries:
+              </span>
+              {(showAllCountries ? uniqueCountries : uniqueCountries.slice(0, 12)).map((country) => (
+                <span
+                  key={country}
+                  className="px-2.5 py-0.5 rounded-md bg-[#091636]/90 border border-[#1E3A6E] text-[11px] font-medium text-slate-200"
+                >
+                  {country}
+                </span>
+              ))}
+              {uniqueCountries.length > 12 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllCountries((prev) => !prev)}
+                  className="px-2.5 py-0.5 rounded-md bg-sky-500/15 border border-sky-400/35 text-[11px] font-bold text-[#38BDF8] hover:bg-sky-500/25 transition cursor-pointer"
+                >
+                  {showAllCountries ? 'Show fewer' : `+${uniqueCountries.length - 12} more`}
+                </button>
+              )}
+            </div>
+          )}
+        </section>
 
         {/* Middle 3-Column Section */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
@@ -568,49 +932,58 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                 </button>
               </div>
 
-              <div className="space-y-2.5">
-                {displayedProblems.length === 0 ? (
-                  <div className="p-5 rounded-xl bg-[#0A1735]/80 border border-[#1A3160]/70 text-center space-y-2">
-                    <p className="text-xs text-slate-400">No problems in this filter yet</p>
-                    <button
-                      type="button"
-                      onClick={() => onOpenSubmit({ kind: 'resource' })}
-                      className="text-xs font-semibold text-[#38BDF8] hover:underline cursor-pointer"
-                    >
-                      Submit a Resource Link +
-                    </button>
-                  </div>
-                ) : (
-                  displayedProblems.map((prob, index) => (
-                    <button
-                      key={prob.id}
-                      type="button"
-                      onClick={() => onSelectProblem(prob)}
-                      className="w-full text-left p-2.5 rounded-xl bg-[#0A1735]/80 border border-[#1A3160]/70 hover:border-sky-400/40 flex items-center justify-between gap-2 transition cursor-pointer"
-                    >
-                      <div className="flex items-center space-x-2.5 min-w-0">
-                        <div className="text-xs font-extrabold text-slate-400 w-3.5 tabular-nums shrink-0">
-                          {index + 1}
-                        </div>
-                        <ProblemThumbnail theme={prob.theme} size="sm" />
-                        <div className="min-w-0">
-                          <h4 className="text-xs font-bold text-white truncate">{prob.title}</h4>
-                          <p className="text-[10px] text-slate-400 mt-0.5 tabular-nums">
-                            {prob.country} · {prob.potentialMatchesCount} matches
-                          </p>
-                        </div>
-                      </div>
-                      <span
-                        className={`px-2 py-0.5 rounded-md border text-[10px] font-semibold shrink-0 whitespace-nowrap ${problemSolutionStatusBadge(
-                          prob.solutionStatus
-                        )}`}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={problemTab}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.16 }}
+                  className="space-y-2.5"
+                >
+                  {displayedProblems.length === 0 ? (
+                    <div className="p-5 rounded-xl bg-[#0A1735]/80 border border-[#1A3160]/70 text-center space-y-2">
+                      <p className="text-xs text-slate-400">No problems in this filter yet</p>
+                      <button
+                        type="button"
+                        onClick={() => onOpenSubmit({ kind: 'resource' })}
+                        className="text-xs font-semibold text-[#38BDF8] hover:underline cursor-pointer"
                       >
-                        {prob.solutionStatus}
-                      </span>
-                    </button>
-                  ))
-                )}
-              </div>
+                        Submit a Resource Link +
+                      </button>
+                    </div>
+                  ) : (
+                    displayedProblems.map((prob, index) => (
+                      <button
+                        key={prob.id}
+                        type="button"
+                        onClick={() => onSelectProblem(prob)}
+                        className="w-full text-left p-2.5 rounded-xl bg-[#0A1735]/80 border border-[#1A3160]/70 hover:border-sky-400/40 flex items-center justify-between gap-2 transition cursor-pointer"
+                      >
+                        <div className="flex items-center space-x-2.5 min-w-0">
+                          <div className="text-xs font-extrabold text-slate-400 w-3.5 tabular-nums shrink-0">
+                            {index + 1}
+                          </div>
+                          <ProblemThumbnail theme={prob.theme} size="sm" />
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-bold text-white truncate">{prob.title}</h4>
+                            <p className="text-[10px] text-slate-400 mt-0.5 tabular-nums">
+                              {prob.country} · {prob.potentialMatchesCount} matches
+                            </p>
+                          </div>
+                        </div>
+                        <span
+                          className={`px-2 py-0.5 rounded-md border text-[10px] font-semibold shrink-0 whitespace-nowrap ${problemSolutionStatusBadge(
+                            prob.solutionStatus
+                          )}`}
+                        >
+                          {prob.solutionStatus}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </motion.div>
+              </AnimatePresence>
             </div>
           </div>
 
@@ -671,9 +1044,12 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex items-center space-x-1.5 text-[11px] text-amber-400 font-bold tabular-nums">
-                      <Star className="w-3 h-3 fill-amber-400" />
-                      <span>{latestVerified.usersCount}</span>
+                    <div className="flex items-center space-x-1.5 text-[11px] text-emerald-300 font-bold tabular-nums">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>
+                        {latestVerified.humanReviewStatus ||
+                          (latestVerified.verified ? 'Human Verified' : 'Awaiting Review')}
+                      </span>
                       <span className="text-slate-400 font-normal ml-1">
                         · {latestVerified.country}
                       </span>
@@ -775,6 +1151,111 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Featured Startups Spotlight (Backend-Ranked by Usefulness — Never User-Promoted) */}
+        <section className="relative overflow-hidden rounded-3xl glass-card border border-amber-400/20 p-5 lg:p-6 space-y-4">
+          <div
+            className="pointer-events-none absolute -top-16 right-16 w-64 h-32 rounded-full bg-amber-400/10 blur-3xl"
+            aria-hidden="true"
+          />
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-400/35 text-amber-300 flex items-center justify-center shrink-0">
+                <Award className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-extrabold text-base text-white tracking-tight">
+                    Featured Startups
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-400/30 text-[10px] font-bold text-amber-300">
+                    Backend Usefulness Ranked
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Automatically surfaced by real-world usefulness, verified evidence &amp; confirmed solves — founders cannot self-feature posts
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onNavigate('startups')}
+              className="self-start sm:self-auto px-3.5 py-2 rounded-xl bg-[#0B1B40]/90 border border-sky-400/30 hover:border-sky-300/60 text-xs font-bold text-[#38BDF8] flex items-center space-x-1.5 transition cursor-pointer shrink-0"
+            >
+              <span>All Startups ({startupsCount})</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {featuredStartups.length === 0 ? (
+            <div className="relative z-10 p-6 rounded-2xl bg-[#0A1735]/80 border border-[#1A3160]/70 text-center space-y-2">
+              <p className="text-xs font-semibold text-slate-300">
+                Awaiting backend usefulness scoring (`GET /api/startups/featured`)
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Startups are promoted here solely by server-side impact and verification metrics.
+              </p>
+            </div>
+          ) : (
+            <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-4">
+              {featuredStartups.map((st) => (
+                <div
+                  key={st.id}
+                  className="p-4 rounded-2xl bg-gradient-to-br from-[#0B1B42]/95 to-[#07122D]/95 border border-[#1E3A6E] hover:border-amber-400/45 transition flex flex-col justify-between space-y-3"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-extrabold text-white truncate">{st.name}</h4>
+                        <p className="text-[11px] text-[#38BDF8] font-medium mt-0.5">
+                          {st.sector} · {st.stage} · {st.country}
+                        </p>
+                      </div>
+                      {typeof st.usefulnessScore === 'number' && (
+                        <span className="px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-400/35 text-[10px] font-bold text-amber-300 shrink-0 tabular-nums">
+                          {st.usefulnessScore}% Useful
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed line-clamp-2">
+                      {st.description}
+                    </p>
+                    {st.featuredReason && (
+                      <div className="px-2.5 py-1.5 rounded-lg bg-[#050E24] border border-amber-400/20 text-[10px] text-amber-200/90 leading-snug">
+                        {st.featuredReason}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2.5 border-t border-[#172B54]/80 text-[11px]">
+                    <span className="text-slate-400 font-medium">
+                      Indexed {st.submittedAt}
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => onNavigate('startups')}
+                        className="text-slate-300 hover:text-white font-semibold cursor-pointer"
+                      >
+                        Directory
+                      </button>
+                      <a
+                        href={st.websiteUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[#38BDF8] font-bold inline-flex items-center space-x-1 hover:underline"
+                      >
+                        <span>Visit</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         {/* Bottom 3-Card Color Showcase Row */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 pb-6 items-stretch">
@@ -920,10 +1401,10 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => onOpenSubmit({ kind: 'resource', prefillUrl: quickUrl })}
+                onClick={() => onOpenSubmit({ kind: 'pdf' })}
                 className="flex items-center space-x-1 hover:underline cursor-pointer"
               >
-                <span>Add optional context →</span>
+                <span>Upload PDF / Add context →</span>
               </button>
             </div>
           </div>
@@ -931,16 +1412,28 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
           {/* Go Pro – Get More Reach (3 Cols — Deep Royal Violet + Gold Bars & Crown!) */}
           <div className="lg:col-span-3 rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden bg-gradient-to-br from-[#4320A8] via-[#28136E] to-[#120A38] border border-purple-400/40 glow-purple">
             <div
-              className="absolute right-2 bottom-2 flex items-end space-x-1.5 opacity-45 pointer-events-none"
+              className="absolute right-2 bottom-2 flex items-end space-x-1.5 opacity-50 pointer-events-none"
               aria-hidden="true"
             >
-              <div className="w-2.5 h-6 rounded-t bg-gradient-to-t from-purple-700 to-purple-400" />
-              <div className="w-2.5 h-9 rounded-t bg-gradient-to-t from-purple-700 to-purple-300" />
-              <div className="w-2.5 h-12 rounded-t bg-gradient-to-t from-purple-600 to-amber-300" />
-              <div className="w-2.5 h-16 rounded-t bg-gradient-to-t from-amber-600 to-amber-300" />
+              <div
+                className="w-2.5 h-6 rounded-t bg-gradient-to-t from-purple-700 to-purple-400 animate-bar-equalize"
+                style={{ animationDelay: '0s' }}
+              />
+              <div
+                className="w-2.5 h-9 rounded-t bg-gradient-to-t from-purple-700 to-purple-300 animate-bar-equalize"
+                style={{ animationDelay: '0.4s' }}
+              />
+              <div
+                className="w-2.5 h-12 rounded-t bg-gradient-to-t from-purple-600 to-amber-300 animate-bar-equalize"
+                style={{ animationDelay: '0.8s' }}
+              />
+              <div
+                className="w-2.5 h-16 rounded-t bg-gradient-to-t from-amber-600 to-amber-300 animate-bar-equalize"
+                style={{ animationDelay: '1.2s' }}
+              />
             </div>
             <div
-              className="absolute right-3 bottom-14 w-16 h-16 bg-amber-400/20 rounded-full blur-xl pointer-events-none"
+              className="absolute right-3 bottom-14 w-16 h-16 bg-amber-400/20 rounded-full blur-xl pointer-events-none animate-glow-breathe"
               aria-hidden="true"
             />
 

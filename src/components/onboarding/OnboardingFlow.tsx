@@ -14,6 +14,7 @@ import {
   Sparkles,
   Users,
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   CONTRIBUTION_OPTIONS,
   GOAL_OPTIONS,
@@ -210,21 +211,21 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-              <div className="p-3.5 rounded-2xl bg-[#08132B]/85 border border-[#1E386E]/80 space-y-1">
+              <div className="p-3.5 rounded-2xl bg-[#08132B]/85 border border-[#1E386E]/80 space-y-1 hover:border-sky-400/40 transition">
                 <Compass className="w-4 h-4 text-[#22D3EE]" />
                 <div className="text-xs font-bold text-white">Discover Problems</div>
                 <p className="text-[11px] text-slate-400">
                   Track challenges tailored to your industries and region.
                 </p>
               </div>
-              <div className="p-3.5 rounded-2xl bg-[#08132B]/85 border border-[#1E386E]/80 space-y-1">
+              <div className="p-3.5 rounded-2xl bg-[#08132B]/85 border border-[#1E386E]/80 space-y-1 hover:border-amber-400/40 transition">
                 <Sparkles className="w-4 h-4 text-amber-400" />
                 <div className="text-xs font-bold text-white">Share Solutions</div>
                 <p className="text-[11px] text-slate-400">
                   Publish proposals, startups, and verified breakthroughs.
                 </p>
               </div>
-              <div className="p-3.5 rounded-2xl bg-[#08132B]/85 border border-[#1E386E]/80 space-y-1">
+              <div className="p-3.5 rounded-2xl bg-[#08132B]/85 border border-[#1E386E]/80 space-y-1 hover:border-sky-400/40 transition">
                 <Users className="w-4 h-4 text-[#38BDF8]" />
                 <div className="text-xs font-bold text-white">Connect Globally</div>
                 <p className="text-[11px] text-slate-400">
@@ -315,13 +316,22 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         maxWidthClass="max-w-md"
         onOpenLegal={openLegal}
         headerRight={
-          <button
-            type="button"
-            onClick={() => setPhase('welcome')}
-            className="text-xs font-semibold text-[#38BDF8] hover:underline cursor-pointer"
-          >
-            Back to Welcome
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onEnterGuestPreview}
+              className="px-3 py-1.5 rounded-xl bg-[#0A1633] border border-[#1E386E] text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer"
+            >
+              Review App
+            </button>
+            <button
+              type="button"
+              onClick={() => setPhase('welcome')}
+              className="text-xs font-semibold text-[#38BDF8] hover:underline cursor-pointer"
+            >
+              Back to Welcome
+            </button>
+          </div>
         }
       >
         <div className="glass-card rounded-3xl p-6 sm:p-8 space-y-5 border border-sky-400/25">
@@ -1283,7 +1293,17 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
 
   return (
     <>
-      {renderPhase()}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={phase === 'questions' ? `${phase}-${step}` : phase}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        >
+          {renderPhase()}
+        </motion.div>
+      </AnimatePresence>
       <LegalDocumentModal
         open={legalModalOpen}
         activeDocId={legalDocId}

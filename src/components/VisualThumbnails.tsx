@@ -235,7 +235,7 @@ export const HeroGlobeGraphic: React.FC<{ variant?: 'desktop' | 'mobile' }> = ({
 
   return (
     <div
-      className={`absolute pointer-events-none select-none ${sizeClasses}`}
+      className={`absolute pointer-events-none select-none animate-float-gentle ${sizeClasses}`}
       aria-hidden="true"
     >
       <svg viewBox="0 0 400 400" className="w-full h-full">
@@ -247,39 +247,52 @@ export const HeroGlobeGraphic: React.FC<{ variant?: 'desktop' | 'mobile' }> = ({
             <stop offset="100%" stopColor="#00A3FF" stopOpacity="0.9" />
           </radialGradient>
           <radialGradient id={`globeHalo-${variant}`} cx="50%" cy="50%" r="50%">
-            <stop offset="55%" stopColor="#0088FF" stopOpacity="0.38" />
-            <stop offset="82%" stopColor="#19C8FF" stopOpacity="0.12" />
+            <stop offset="55%" stopColor="#0088FF" stopOpacity="0.42" />
+            <stop offset="82%" stopColor="#19C8FF" stopOpacity="0.14" />
             <stop offset="100%" stopColor="#050C1D" stopOpacity="0" />
           </radialGradient>
         </defs>
 
-        {/* Outer atmospheric bloom */}
-        <circle cx="200" cy="200" r="190" fill={`url(#globeHalo-${variant})`} />
+        {/* Breathing outer atmospheric bloom */}
+        <circle
+          cx="200"
+          cy="200"
+          r="190"
+          fill={`url(#globeHalo-${variant})`}
+          className="animate-glow-breathe"
+        />
 
-        {/* Orbital rings */}
-        <ellipse
-          cx="200"
-          cy="200"
-          rx="172"
-          ry="68"
-          transform="rotate(-22 200 200)"
-          stroke="#38BDF8"
-          strokeWidth="0.9"
-          strokeOpacity="0.35"
-          fill="none"
-        />
-        <ellipse
-          cx="200"
-          cy="200"
-          rx="165"
-          ry="56"
-          transform="rotate(24 200 200)"
-          stroke="#60A5FA"
-          strokeWidth="0.8"
-          strokeOpacity="0.28"
-          strokeDasharray="4 4"
-          fill="none"
-        />
+        {/* Counter-rotating orbital rings with satellite beacons */}
+        <g className="animate-orbit-cw">
+          <ellipse
+            cx="200"
+            cy="200"
+            rx="172"
+            ry="68"
+            transform="rotate(-22 200 200)"
+            stroke="#38BDF8"
+            strokeWidth="0.95"
+            strokeOpacity="0.38"
+            fill="none"
+          />
+          <circle cx="359" cy="136" r="2.8" fill="#38BDF8" opacity="0.9" />
+        </g>
+
+        <g className="animate-orbit-ccw">
+          <ellipse
+            cx="200"
+            cy="200"
+            rx="165"
+            ry="56"
+            transform="rotate(24 200 200)"
+            stroke="#60A5FA"
+            strokeWidth="0.85"
+            strokeOpacity="0.3"
+            strokeDasharray="4 4"
+            fill="none"
+          />
+          <circle cx="49" cy="133" r="2.4" fill="#FBBF24" opacity="0.85" />
+        </g>
 
         {/* Core Earth sphere */}
         <circle
@@ -289,7 +302,7 @@ export const HeroGlobeGraphic: React.FC<{ variant?: 'desktop' | 'mobile' }> = ({
           fill={`url(#globeSphere-${variant})`}
           stroke="#38BDF8"
           strokeWidth="1.8"
-          strokeOpacity="0.65"
+          strokeOpacity="0.68"
         />
 
         {/* Latitude / Longitude wireframe */}
@@ -301,35 +314,34 @@ export const HeroGlobeGraphic: React.FC<{ variant?: 'desktop' | 'mobile' }> = ({
           <ellipse cx="200" cy="248" rx="115" ry="26" />
         </g>
 
-        {/* Illuminated warm gold continent mesh (Europe/Africa/Asia/Americas feel) */}
-        <g fill="#FBBF24" opacity="0.85">
-          {/* Africa / Europe silhouette dots */}
-          <circle cx="195" cy="148" r="2.2" />
-          <circle cx="208" cy="144" r="2.6" />
-          <circle cx="222" cy="150" r="2.2" />
-          <circle cx="190" cy="166" r="2.4" />
-          <circle cx="205" cy="176" r="3.0" />
-          <circle cx="220" cy="172" r="2.2" />
-          <circle cx="204" cy="196" r="2.8" />
-          <circle cx="216" cy="208" r="2.3" />
-          <circle cx="222" cy="232" r="2.5" />
-          <circle cx="210" cy="248" r="2.2" />
+        {/* Illuminated warm gold continent mesh with staggered node shimmer */}
+        <g fill="#FBBF24">
+          <circle cx="195" cy="148" r="2.2" className="animate-node-twinkle" style={{ animationDelay: '0s' }} />
+          <circle cx="208" cy="144" r="2.6" className="animate-node-twinkle" style={{ animationDelay: '0.5s' }} />
+          <circle cx="222" cy="150" r="2.2" opacity="0.85" />
+          <circle cx="190" cy="166" r="2.4" opacity="0.85" />
+          <circle cx="205" cy="176" r="3.0" className="animate-node-twinkle" style={{ animationDelay: '1.1s' }} />
+          <circle cx="220" cy="172" r="2.2" opacity="0.85" />
+          <circle cx="204" cy="196" r="2.8" opacity="0.9" />
+          <circle cx="216" cy="208" r="2.3" className="animate-node-twinkle" style={{ animationDelay: '1.7s' }} />
+          <circle cx="222" cy="232" r="2.5" opacity="0.85" />
+          <circle cx="210" cy="248" r="2.2" opacity="0.8" />
           {/* Eurasia & Middle East */}
-          <circle cx="242" cy="152" r="2.7" />
-          <circle cx="258" cy="160" r="2.2" />
-          <circle cx="272" cy="176" r="2.8" />
-          <circle cx="286" cy="166" r="2.4" />
-          <circle cx="264" cy="192" r="2.5" />
+          <circle cx="242" cy="152" r="2.7" opacity="0.85" />
+          <circle cx="258" cy="160" r="2.2" className="animate-node-twinkle" style={{ animationDelay: '0.8s' }} />
+          <circle cx="272" cy="176" r="2.8" className="animate-node-twinkle" style={{ animationDelay: '1.4s' }} />
+          <circle cx="286" cy="166" r="2.4" opacity="0.85" />
+          <circle cx="264" cy="192" r="2.5" opacity="0.85" />
           {/* Americas */}
-          <circle cx="128" cy="160" r="2.5" />
-          <circle cx="142" cy="172" r="2.8" />
-          <circle cx="136" cy="192" r="2.3" />
-          <circle cx="152" cy="224" r="2.6" />
-          <circle cx="160" cy="246" r="2.2" />
+          <circle cx="128" cy="160" r="2.5" className="animate-node-twinkle" style={{ animationDelay: '0.3s' }} />
+          <circle cx="142" cy="172" r="2.8" opacity="0.88" />
+          <circle cx="136" cy="192" r="2.3" opacity="0.85" />
+          <circle cx="152" cy="224" r="2.6" className="animate-node-twinkle" style={{ animationDelay: '2.0s' }} />
+          <circle cx="160" cy="246" r="2.2" opacity="0.82" />
         </g>
 
-        {/* Cyan network connection arcs across globe */}
-        <g stroke="#22D3EE" strokeWidth="1.2" fill="none" strokeOpacity="0.72">
+        {/* Base cyan network connection arcs */}
+        <g stroke="#22D3EE" strokeWidth="1" fill="none" strokeOpacity="0.28">
           <path d="M128 160 Q168 118 208 144" />
           <path d="M208 144 Q240 132 272 176" />
           <path d="M142 172 Q176 164 205 176" />
@@ -337,13 +349,22 @@ export const HeroGlobeGraphic: React.FC<{ variant?: 'desktop' | 'mobile' }> = ({
           <path d="M152 224 Q188 212 222 232" />
         </g>
 
+        {/* Flowing light pulses traveling across intercontinental arcs */}
+        <g stroke="#67E8F9" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeOpacity="0.85">
+          <path d="M128 160 Q168 118 208 144" className="animate-arc-flow" />
+          <path d="M208 144 Q240 132 272 176" className="animate-arc-flow" style={{ animationDelay: '-0.8s' }} />
+          <path d="M142 172 Q176 164 205 176" className="animate-arc-flow" style={{ animationDelay: '-1.5s' }} />
+          <path d="M205 176 Q238 192 264 192" className="animate-arc-flow" style={{ animationDelay: '-2.1s' }} />
+          <path d="M152 224 Q188 212 222 232" className="animate-arc-flow" style={{ animationDelay: '-0.4s' }} />
+        </g>
+
         {/* Cyan & white star nodes */}
         <g fill="#7DD3FC">
-          <circle cx="105" cy="128" r="2" />
-          <circle cx="298" cy="124" r="2.4" />
-          <circle cx="318" cy="224" r="2" />
-          <circle cx="94" cy="242" r="1.8" />
-          <circle cx="246" cy="96" r="2.2" />
+          <circle cx="105" cy="128" r="2" className="animate-node-twinkle" style={{ animationDelay: '0.2s' }} />
+          <circle cx="298" cy="124" r="2.4" className="animate-node-twinkle" style={{ animationDelay: '1.3s' }} />
+          <circle cx="318" cy="224" r="2" className="animate-node-twinkle" style={{ animationDelay: '2.2s' }} />
+          <circle cx="94" cy="242" r="1.8" className="animate-node-twinkle" style={{ animationDelay: '0.9s' }} />
+          <circle cx="246" cy="96" r="2.2" className="animate-node-twinkle" style={{ animationDelay: '1.8s' }} />
         </g>
       </svg>
     </div>
@@ -422,7 +443,7 @@ export const DottedWorldMap: React.FC<DottedWorldMapProps> = ({ selectedRegionId
             <circle cx="2" cy="2" r="1.25" fill="#19C8FF" opacity="0.68" />
           </pattern>
         </defs>
-        {/* Dotted continent clusters matching the glowing blue map in the image */}
+        {/* Dotted continent clusters */}
         <path
           d="M32 30 Q68 22 98 42 Q88 64 62 72 Q42 60 32 30 Z M74 75 Q92 78 96 108 Q80 120 68 100 Z M136 26 Q172 20 188 42 Q165 56 138 48 Z M142 56 Q176 54 190 88 Q168 114 150 98 Q138 78 142 56 Z M192 32 Q258 24 288 58 Q260 86 218 78 Q196 62 192 32 Z M254 88 Q284 85 292 108 Q266 116 252 102 Z"
           fill="url(#blueDotContinents)"
@@ -430,21 +451,43 @@ export const DottedWorldMap: React.FC<DottedWorldMapProps> = ({ selectedRegionId
           strokeWidth="0.8"
         />
 
-        <path d="M74 52 Q 116 24 158 40" stroke="rgba(56, 189, 248, 0.45)" strokeDasharray="3 3" fill="none" />
-        <path d="M158 40 Q 162 60 164 80" stroke="rgba(56, 189, 248, 0.45)" strokeDasharray="3 3" fill="none" />
-        <path d="M164 80 Q 198 62 234 56" stroke="rgba(56, 189, 248, 0.45)" strokeDasharray="3 3" fill="none" />
-        <path d="M74 52 Q 82 76 96 98" stroke="rgba(56, 189, 248, 0.45)" strokeDasharray="3 3" fill="none" />
+        {/* Base route lines */}
+        <g stroke="rgba(56, 189, 248, 0.28)" strokeWidth="1" fill="none">
+          <path d="M74 52 Q 116 24 158 40" />
+          <path d="M158 40 Q 162 60 164 80" />
+          <path d="M164 80 Q 198 62 234 56" />
+          <path d="M74 52 Q 82 76 96 98" />
+        </g>
+
+        {/* Animated live connection arcs */}
+        <g stroke="rgba(56, 189, 248, 0.72)" strokeWidth="1.2" fill="none" strokeLinecap="round">
+          <path d="M74 52 Q 116 24 158 40" className="animate-arc-flow" />
+          <path d="M158 40 Q 162 60 164 80" className="animate-arc-flow" style={{ animationDelay: '-0.7s' }} />
+          <path d="M164 80 Q 198 62 234 56" className="animate-arc-flow" style={{ animationDelay: '-1.4s' }} />
+          <path d="M74 52 Q 82 76 96 98" className="animate-arc-flow" style={{ animationDelay: '-2.0s' }} />
+        </g>
 
         {nodes.map((node) => {
           const active = selectedRegionId === node.id;
           return (
             <g
               key={node.id}
-              className="cursor-pointer"
+              className="cursor-pointer group"
               onClick={() => onSelectRegion(node.id)}
             >
               {active && (
-                <circle cx={node.x} cy={node.y} r="10" fill="rgba(25, 200, 255, 0.28)" />
+                <>
+                  <circle
+                    cx={node.x}
+                    cy={node.y}
+                    r="8"
+                    fill="none"
+                    stroke="rgba(251, 191, 36, 0.6)"
+                    strokeWidth="1.2"
+                    className="animate-radar-pulse"
+                  />
+                  <circle cx={node.x} cy={node.y} r="9" fill="rgba(25, 200, 255, 0.24)" />
+                </>
               )}
               <circle
                 cx={node.x}
@@ -453,6 +496,8 @@ export const DottedWorldMap: React.FC<DottedWorldMapProps> = ({ selectedRegionId
                 fill={active ? '#FBBF24' : '#38BDF8'}
                 stroke="#040A1A"
                 strokeWidth="1.5"
+                className="transition-transform duration-150 group-hover:scale-125"
+                style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
               />
               <text
                 x={node.x}

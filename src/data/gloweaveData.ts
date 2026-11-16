@@ -59,17 +59,50 @@ export const CATEGORIES = [
   'EdTech',
 ] as const;
 
+export const SUBMISSION_RESOURCE_TYPES = [
+  'Website URL',
+  'Research Paper / Report',
+  'Technical Documentation',
+  'Product / Service Website',
+  'Startup',
+  'Other Resource',
+] as const;
+
+export const ALL_RESOURCE_FILTER_TYPES = [
+  'Website URL',
+  'PDF Document',
+  'Research Paper / Report',
+  'Technical Documentation',
+  'Product / Service Website',
+  'Startup',
+  'Product',
+  'Research',
+  'Website',
+  'Other Resource',
+] as const;
+
+export const VERIFICATION_STATUSES = [
+  'AI Identified',
+  'Awaiting Review',
+  'Verified',
+  'Rejected',
+  'More Evidence Required',
+  'Resolved',
+] as const;
+
+export const IMPACT_SEVERITY_LEVELS = ['Low', 'Medium', 'High', 'Critical'] as const;
+
 export const INITIAL_PROBLEMS: ProblemItem[] = [];
 
 export const INITIAL_SOLUTIONS: SolutionItem[] = [];
 
-export const INITIAL_MATCHES: MatchItem[] = [];
-
 export const INITIAL_STARTUPS: StartupItem[] = [];
 
-export const INITIAL_SUBMISSIONS: ResourceSubmission[] = [];
-
 export const INITIAL_CONTRIBUTORS: ContributorItem[] = [];
+
+export const INITIAL_MATCHES: MatchItem[] = [];
+
+export const INITIAL_SUBMISSIONS: ResourceSubmission[] = [];
 
 export const REGION_INSIGHTS: RegionInsight[] = [
   {
@@ -78,7 +111,7 @@ export const REGION_INSIGHTS: RegionInsight[] = [
     flag: '🌍',
     percentage: 0,
     activeNodes: 0,
-    topSector: 'None yet',
+    topSector: '—',
     startupsCount: '0',
     regionGroup: 'Africa',
   },
@@ -88,29 +121,9 @@ export const REGION_INSIGHTS: RegionInsight[] = [
     flag: '🌏',
     percentage: 0,
     activeNodes: 0,
-    topSector: 'None yet',
+    topSector: '—',
     startupsCount: '0',
     regionGroup: 'Asia',
-  },
-  {
-    id: 'reg-sa',
-    name: 'South America',
-    flag: '🌎',
-    percentage: 0,
-    activeNodes: 0,
-    topSector: 'None yet',
-    startupsCount: '0',
-    regionGroup: 'South America',
-  },
-  {
-    id: 'reg-na',
-    name: 'North America',
-    flag: '🌎',
-    percentage: 0,
-    activeNodes: 0,
-    topSector: 'None yet',
-    startupsCount: '0',
-    regionGroup: 'North America',
   },
   {
     id: 'reg-eu',
@@ -118,9 +131,39 @@ export const REGION_INSIGHTS: RegionInsight[] = [
     flag: '🌍',
     percentage: 0,
     activeNodes: 0,
-    topSector: 'None yet',
+    topSector: '—',
     startupsCount: '0',
     regionGroup: 'Europe',
+  },
+  {
+    id: 'reg-na',
+    name: 'North America',
+    flag: '🌎',
+    percentage: 0,
+    activeNodes: 0,
+    topSector: '—',
+    startupsCount: '0',
+    regionGroup: 'North America',
+  },
+  {
+    id: 'reg-sa',
+    name: 'South America',
+    flag: '🌎',
+    percentage: 0,
+    activeNodes: 0,
+    topSector: '—',
+    startupsCount: '0',
+    regionGroup: 'South America',
+  },
+  {
+    id: 'reg-oc',
+    name: 'Oceania',
+    flag: '🌏',
+    percentage: 0,
+    activeNodes: 0,
+    topSector: '—',
+    startupsCount: '0',
+    regionGroup: 'Oceania',
   },
 ];
 

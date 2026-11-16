@@ -1,35 +1,64 @@
 import React, { useRef, useState } from 'react';
 import {
+  AlertTriangle,
+  ArrowLeft,
   ArrowUp,
+  Award,
   Bell,
   Camera,
   Check,
   CheckCheck,
+  ChevronRight,
   Clock,
   Crown,
   ExternalLink,
+  Eye,
+  FileText,
+  Filter,
   Globe,
+  Image as ImageIcon,
   LifeBuoy,
   Lightbulb,
   Link2,
+  Loader2,
   MessageSquare,
   Network,
   Plus,
+  RefreshCw,
   Rocket,
   Scale,
+  Search,
   Send,
+  Server,
   Settings,
   Sparkles,
   Star,
   ThumbsUp,
   Trophy,
+  Upload,
+  X,
 } from 'lucide-react';
-import { CATEGORIES } from '../data/gloweaveData';
+import {
+  ALL_RESOURCE_FILTER_TYPES,
+  CATEGORIES,
+  IMPACT_SEVERITY_LEVELS,
+  VERIFICATION_STATUSES,
+} from '../data/gloweaveData';
 import { CONTINENTS } from '../data/countries';
 import {
+  APP_VERSION,
+  BACKEND_API_CONTRACTS,
+  getBackendStatusLabel,
+  isBackendConfigured,
+} from '../lib/backendApi';
+import {
+  ChatAttachment,
   ContributorItem,
+  EvidenceType,
+  ImpactSeverityLevel,
   LegalDocumentId,
   MatchItem,
+  MatchUserFeedback,
   MessageThread,
   NavView,
   NotificationItem,
@@ -37,6 +66,7 @@ import {
   ProblemSolutionStatus,
   RegionFilter,
   RegionInsight,
+  ResourceKind,
   ResourceSubmission,
   SettingsTabId,
   SolutionItem,
@@ -44,6 +74,7 @@ import {
   StartupItem,
   SupportTabId,
   UserSettingsPreferences,
+  VerificationStatus,
 } from '../types/gloweave';
 import { CountrySelector } from './CountrySelector';
 import { LegalDocumentView } from './LegalDocumentView';
@@ -51,7 +82,9 @@ import { MatchesView } from './MatchesView';
 import {
   ProblemDetailView,
   problemSolutionStatusBadge,
+  severityBadge,
   solutionStatusBadge,
+  verificationStatusBadge,
 } from './ProblemDetailView';
 import { SettingsView } from './SettingsView';
 import { SupportView } from './SupportView';
@@ -77,7 +110,7 @@ interface SecondaryViewsProps {
   messages: MessageThread[];
   notifications: NotificationItem[];
   activeProblemDetail: ProblemItem | null;
-  activeThreadId: string;
+  activeThreadId: string | null;
   authenticatedUser: { id: string; email: string } | null;
   isPro: boolean;
   profileName: string;
@@ -97,7 +130,7 @@ interface SecondaryViewsProps {
   onRequestDeleteAccount: () => void;
   onSelectView: (view: NavView) => void;
   onBackFromProblem: () => void;
-  onOpenSubmit: (opts?: { kind?: 'resource' | 'evidence'; problemId?: string }) => void;
+  onOpenSubmit: (opts?: { kind?: 'resource' | 'pdf' | 'evidence'; problemId?: string }) => void;
   onOpenUpgrade: () => void;
   onSelectProblem: (p: ProblemItem) => void;
   onSelectSolution: (s: SolutionItem) => void;
@@ -105,11 +138,34 @@ interface SecondaryViewsProps {
   onToggleProblemBookmark: (id: string) => void;
   onToggleSolutionBookmark: (id: string) => void;
   onToggleMatchBookmark: (id: string) => void;
+  onSubmitMatchFeedback?: (matchId: string, feedback: MatchUserFeedback, note?: string) => void;
+  onSubmitHumanVerification?: (payload: {
+    problemId: string;
+    decision: VerificationStatus;
+    comment: string;
+    humanConfirmationChecked: boolean;
+  }) => void;
+  onAddEvidence?: (payload: {
+    problemId: string;
+    sourceTitle: string;
+    sourceUrl?: string;
+    documentName?: string;
+    extractedReference: string;
+    supportingEvidence: string;
+    evidenceType: EvidenceType;
+  }) => void;
+  onRetrySubmission?: (submissionId: string) => void;
   onShareProblem: (p: ProblemItem) => void;
   onToggleConnect: (id: string) => void;
   onStartMessageWith: (person: ContributorItem) => void;
-  onSelectThread: (threadId: string) => void;
-  onSendMessage: (threadId: string, text: string) => void;
+  onSelectThread: (threadId: string | null) => void;
+  onSendMessage: (threadId: string, text: string, attachments?: ChatAttachment[]) => void;
+  onSummarizeMessageLink: (
+    threadId: string,
+    messageId: string,
+    attachmentId: string,
+    url: string
+  ) => void;
   onMarkAllNotificationsRead: () => void;
   onNotificationClick: (n: NotificationItem) => void;
   onUpdateProfile: (updates: {
@@ -120,8 +176,29 @@ interface SecondaryViewsProps {
   }) => void;
   onUploadPhoto: (dataUrl: string) => void;
   onRemovePhoto: () => void;
+  onRequireAuth?: (actionLabel: string) => void;
   onToast: (msg: string) => void;
 }
+
+const formatChatFileSize = (bytes?: number) => {
+  if (!bytes || bytes <= 0) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const extractDomainLabel = (rawUrl: string) => {
+  try {
+    return new URL(rawUrl).hostname.replace(/^www\./, '');
+  } catch {
+    return rawUrl;
+  }
+};
+
+const extractUrlsFromText = (text: string): string[] => {
+  const found = text.match(/https?:\/\/[^\s<>"']+/gi) || [];
+  return Array.from(new Set(found));
+};
 
 export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
   activeView,
@@ -165,21 +242,36 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
   onToggleProblemBookmark,
   onToggleSolutionBookmark,
   onToggleMatchBookmark,
+  onSubmitMatchFeedback,
+  onSubmitHumanVerification,
+  onAddEvidence,
+  onRetrySubmission,
   onShareProblem,
   onToggleConnect,
   onStartMessageWith,
   onSelectThread,
   onSendMessage,
+  onSummarizeMessageLink,
   onMarkAllNotificationsRead,
   onNotificationClick,
   onUpdateProfile,
   onUploadPhoto,
   onRemovePhoto,
+  onRequireAuth,
   onToast,
 }) => {
   const [discoverTab, setDiscoverTab] = useState<'problems' | 'batches' | 'solutions' | 'startups'>('problems');
   const [discoverStatusFilter, setDiscoverStatusFilter] = useState<'All' | ProblemSolutionStatus>('All');
   const [discoverIndustryFilter, setDiscoverIndustryFilter] = useState<string>('All');
+  const [discoverRegionFilter, setDiscoverRegionFilter] = useState<RegionFilter>('Global');
+  const [discoverCountryFilter, setDiscoverCountryFilter] = useState<string>('All');
+  const [discoverSeverityFilter, setDiscoverSeverityFilter] = useState<'All' | ImpactSeverityLevel>('All');
+  const [discoverVerificationFilter, setDiscoverVerificationFilter] = useState<'All' | VerificationStatus>('All');
+  const [discoverResourceTypeFilter, setDiscoverResourceTypeFilter] = useState<'All' | ResourceKind>('All');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [previewPdfSubmissionId, setPreviewPdfSubmissionId] = useState<string | null>(null);
+  const [showBackendContracts, setShowBackendContracts] = useState(false);
+
   const [problemStatusFilter, setProblemStatusFilter] = useState<'All' | ProblemSolutionStatus>('All');
   const [solutionStatusFilter, setSolutionStatusFilter] = useState<'All' | SolutionStatus>('All');
   const [solutionCategoryFilter, setSolutionCategoryFilter] = useState<string>('All');
@@ -195,10 +287,22 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
   const [selectedRegionId, setSelectedRegionId] = useState('reg-na');
   const [analyticsRange, setAnalyticsRange] = useState<'7D' | '30D' | '90D'>('30D');
 
-  // Community & Notifications
+  // Community, Messaging & Notifications
   const [communityCategory, setCommunityCategory] = useState<string>('All');
   const [notifFilter, setNotifFilter] = useState<'all' | 'unread'>('all');
+  const [contactSearch, setContactSearch] = useState('');
   const [replyText, setReplyText] = useState('');
+  const [stagedAttachments, setStagedAttachments] = useState<ChatAttachment[]>([]);
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [chatLinkUrl, setChatLinkUrl] = useState('');
+  const [chatLinkTitle, setChatLinkTitle] = useState('');
+  const [chatLinkError, setChatLinkError] = useState('');
+  const [previewImageAttachment, setPreviewImageAttachment] = useState<{
+    url: string;
+    title?: string;
+  } | null>(null);
+  const chatImageInputRef = useRef<HTMLInputElement>(null);
+  const chatPdfInputRef = useRef<HTMLInputElement>(null);
 
   // Profile state
   const [profileTab, setProfileTab] = useState<'overview' | 'problems' | 'solutions' | 'saved' | 'upvotes'>('overview');
@@ -245,7 +349,19 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
         p.country.toLowerCase().includes(q) ||
         p.summary.toLowerCase().includes(q)) &&
       (discoverStatusFilter === 'All' || p.solutionStatus === discoverStatusFilter) &&
-      (discoverIndustryFilter === 'All' || p.category === discoverIndustryFilter)
+      (discoverIndustryFilter === 'All' ||
+        p.category === discoverIndustryFilter ||
+        p.industry === discoverIndustryFilter) &&
+      (discoverRegionFilter === 'Global' || p.region === discoverRegionFilter) &&
+      (discoverCountryFilter === 'All' || p.country === discoverCountryFilter) &&
+      (discoverSeverityFilter === 'All' ||
+        p.severity === discoverSeverityFilter ||
+        p.impact === discoverSeverityFilter) &&
+      (discoverVerificationFilter === 'All' ||
+        (p.verificationStatus || 'AI Identified') === discoverVerificationFilter) &&
+      (discoverResourceTypeFilter === 'All' ||
+        p.resourceTypes?.includes(discoverResourceTypeFilter) ||
+        p.sourceEvidence.sourceType === discoverResourceTypeFilter)
   );
 
   const filteredSolutions = filterRegion(solutions).filter(
@@ -277,13 +393,131 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
       (communityCategory === 'All' || c.category === communityCategory)
   );
 
-  const activeThread = messages.find((m) => m.id === activeThreadId) || messages[0];
+  const activeThread = activeThreadId
+    ? messages.find((m) => m.id === activeThreadId) || null
+    : null;
+
+  const handleChatImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      onToast('Please choose a valid picture (PNG, JPG, WebP, or GIF).');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      onToast('Picture exceeds the 10 MB limit.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        const attachment: ChatAttachment = {
+          id: `att-img-${Date.now()}`,
+          type: 'image',
+          url: reader.result,
+          title: file.name,
+          fileSizeBytes: file.size,
+        };
+        setStagedAttachments((prev) => [...prev, attachment]);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleChatPdfSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const isPdf =
+      file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!isPdf) {
+      onToast('Please select a valid PDF document (.pdf).');
+      return;
+    }
+    if (file.size > 25 * 1024 * 1024) {
+      onToast('PDF exceeds the 25 MB limit.');
+      return;
+    }
+    const objectUrl = URL.createObjectURL(file);
+    const attachment: ChatAttachment = {
+      id: `att-pdf-${Date.now()}`,
+      type: 'pdf',
+      url: objectUrl,
+      title: file.name,
+      fileSizeBytes: file.size,
+    };
+    setStagedAttachments((prev) => [...prev, attachment]);
+  };
+
+  const handleAttachChatLink = () => {
+    const raw = chatLinkUrl.trim();
+    if (!raw) {
+      setChatLinkError('Enter a product or resource URL.');
+      return;
+    }
+    const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    try {
+      const parsed = new URL(candidate);
+      if (!parsed.hostname.includes('.')) {
+        setChatLinkError('Enter a valid domain URL (e.g., https://example.com).');
+        return;
+      }
+      const attachment: ChatAttachment = {
+        id: `att-link-${Date.now()}`,
+        type: 'link',
+        url: parsed.toString(),
+        title: chatLinkTitle.trim() || extractDomainLabel(parsed.toString()),
+        linkSummary: { status: 'idle' },
+      };
+      setStagedAttachments((prev) => [...prev, attachment]);
+      setChatLinkUrl('');
+      setChatLinkTitle('');
+      setChatLinkError('');
+      setShowLinkInput(false);
+    } catch {
+      setChatLinkError('Enter a valid URL starting with https:// or http://.');
+    }
+  };
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyText.trim() || !activeThread) return;
-    onSendMessage(activeThread.id, replyText.trim());
+    if (!activeThread) return;
+
+    const trimmed = replyText.trim();
+    const detectedUrls = extractUrlsFromText(trimmed);
+    const existingUrls = new Set(
+      stagedAttachments.filter((a) => a.type === 'link' && a.url).map((a) => a.url)
+    );
+    const autoLinkAttachments: ChatAttachment[] = detectedUrls
+      .filter((u) => !existingUrls.has(u))
+      .map((u, idx) => ({
+        id: `att-autolink-${Date.now()}-${idx}`,
+        type: 'link',
+        url: u,
+        title: extractDomainLabel(u),
+        linkSummary: { status: 'idle' },
+      }));
+
+    const finalAttachments = [...stagedAttachments, ...autoLinkAttachments];
+    if (!trimmed && finalAttachments.length === 0) return;
+
+    if (!authenticatedUser) {
+      onRequireAuth?.('send direct messages and attachments');
+      return;
+    }
+
+    onSendMessage(
+      activeThread.id,
+      trimmed,
+      finalAttachments.length > 0 ? finalAttachments : undefined
+    );
     setReplyText('');
+    setStagedAttachments([]);
+    setShowLinkInput(false);
+    setChatLinkUrl('');
+    setChatLinkTitle('');
+    setChatLinkError('');
   };
 
   // =========================================================
@@ -295,6 +529,9 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
         problem={activeProblemDetail}
         solutions={solutions}
         matches={matches}
+        isAuthenticated={Boolean(authenticatedUser)}
+        reviewerName={profileName || 'Reviewer'}
+        onRequireAuth={onRequireAuth}
         onBack={onBackFromProblem}
         onOpenSubmitEvidence={(problemId) => onOpenSubmit({ kind: 'evidence', problemId })}
         onOpenMatches={() => onSelectView('matches')}
@@ -302,6 +539,8 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
         onToggleUpvote={onToggleUpvote}
         onToggleBookmark={onToggleProblemBookmark}
         onShareProblem={onShareProblem}
+        onSubmitHumanVerification={onSubmitHumanVerification}
+        onAddEvidence={onAddEvidence}
       />
     );
   }
@@ -321,6 +560,7 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
         onOpenSubmitResource={() => onOpenSubmit({ kind: 'resource' })}
         onOpenSubmitEvidence={(problemId) => onOpenSubmit({ kind: 'evidence', problemId })}
         onToggleMatchBookmark={onToggleMatchBookmark}
+        onSubmitMatchFeedback={onSubmitMatchFeedback}
         onToggleConnect={onToggleConnect}
         onStartMessageWith={onStartMessageWith}
       />
@@ -365,6 +605,7 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
         onToggleMatchBookmark={onToggleMatchBookmark}
         onRequestSignOut={onRequestSignOut}
         onRequestDeleteAccount={onRequestDeleteAccount}
+        onRequireAuth={onRequireAuth}
         onToast={onToast}
       />
     );
@@ -446,45 +687,167 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
         {discoverTab === 'problems' && (
           <section className="space-y-4">
             {/* Filters */}
-            <div className="glass-card p-3.5 rounded-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-              <div className="flex flex-wrap gap-1 p-1 bg-[#060E22] border border-[#1E386E] rounded-xl">
-                {solutionStatuses.map((status) => (
+            <div className="glass-card p-3.5 rounded-2xl space-y-3">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div className="flex flex-wrap gap-1 p-1 bg-[#060E22] border border-[#1E386E] rounded-xl">
+                  {solutionStatuses.map((status) => (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => setDiscoverStatusFilter(status)}
+                      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition whitespace-nowrap cursor-pointer ${
+                        discoverStatusFilter === status
+                          ? 'btn-royal text-white'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
                   <button
-                    key={status}
                     type="button"
-                    onClick={() => setDiscoverStatusFilter(status)}
-                    className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition whitespace-nowrap cursor-pointer ${
-                      discoverStatusFilter === status
-                        ? 'btn-royal text-white'
-                        : 'text-slate-400 hover:text-white'
+                    onClick={() => setShowAdvancedFilters((p) => !p)}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center space-x-1.5 transition cursor-pointer ${
+                      showAdvancedFilters
+                        ? 'bg-[#0D2B63] border-sky-400/60 text-white'
+                        : 'bg-[#040A1A] border-[#1E386E] text-slate-200 hover:border-sky-400/50'
                     }`}
                   >
-                    {status}
+                    <Filter className="w-3.5 h-3.5 text-[#38BDF8]" />
+                    <span>All Global Filters</span>
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    onClick={() => onOpenSubmit({ kind: 'pdf' })}
+                    className="px-3 py-1.5 rounded-xl bg-[#0A1633] border border-[#1E386E] hover:border-sky-400/50 text-sky-300 text-xs font-bold whitespace-nowrap cursor-pointer"
+                  >
+                    Upload PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onOpenSubmit({ kind: 'resource' })}
+                    className="px-3.5 py-1.5 rounded-xl btn-royal text-white text-xs font-bold whitespace-nowrap cursor-pointer"
+                  >
+                    + Submit URL
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <select
-                  value={discoverIndustryFilter}
-                  onChange={(e) => setDiscoverIndustryFilter(e.target.value)}
-                  className="bg-[#040A1A] border border-[#1E386E] rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-400"
-                >
-                  <option value="All">All Industries</option>
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => onOpenSubmit({ kind: 'resource' })}
-                  className="px-3.5 py-1.5 rounded-xl btn-royal text-white text-xs font-bold whitespace-nowrap cursor-pointer"
-                >
-                  + Submit Link
-                </button>
-              </div>
+              {showAdvancedFilters && (
+                <div className="pt-3 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2.5 text-xs">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                      Region
+                    </label>
+                    <select
+                      value={discoverRegionFilter}
+                      onChange={(e) => setDiscoverRegionFilter(e.target.value as RegionFilter)}
+                      className="w-full bg-[#040A1A] border border-[#1E386E] rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-400"
+                    >
+                      <option value="Global">Global (All Regions)</option>
+                      {CONTINENTS.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                      Country (A–Z)
+                    </label>
+                    <CountrySelector
+                      value={discoverCountryFilter}
+                      onChange={setDiscoverCountryFilter}
+                      includeAllOption
+                      allOptionLabel="All Countries"
+                      compact
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                      Industry / Category
+                    </label>
+                    <select
+                      value={discoverIndustryFilter}
+                      onChange={(e) => setDiscoverIndustryFilter(e.target.value)}
+                      className="w-full bg-[#040A1A] border border-[#1E386E] rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-400"
+                    >
+                      <option value="All">All Industries</option>
+                      {CATEGORIES.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                      Severity &amp; Impact
+                    </label>
+                    <select
+                      value={discoverSeverityFilter}
+                      onChange={(e) =>
+                        setDiscoverSeverityFilter(e.target.value as 'All' | ImpactSeverityLevel)
+                      }
+                      className="w-full bg-[#040A1A] border border-[#1E386E] rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-400"
+                    >
+                      <option value="All">All Severities</option>
+                      {IMPACT_SEVERITY_LEVELS.map((lvl) => (
+                        <option key={lvl} value={lvl}>
+                          {lvl}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                      Verification Status
+                    </label>
+                    <select
+                      value={discoverVerificationFilter}
+                      onChange={(e) =>
+                        setDiscoverVerificationFilter(e.target.value as 'All' | VerificationStatus)
+                      }
+                      className="w-full bg-[#040A1A] border border-[#1E386E] rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-400"
+                    >
+                      <option value="All">All Verification States</option>
+                      {VERIFICATION_STATUSES.map((st) => (
+                        <option key={st} value={st}>
+                          {st}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                      Resource &amp; Source Type
+                    </label>
+                    <select
+                      value={discoverResourceTypeFilter}
+                      onChange={(e) =>
+                        setDiscoverResourceTypeFilter(e.target.value as 'All' | ResourceKind)
+                      }
+                      className="w-full bg-[#040A1A] border border-[#1E386E] rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-400"
+                    >
+                      <option value="All">All Resource Types</option>
+                      {ALL_RESOURCE_FILTER_TYPES.map((rt) => (
+                        <option key={rt} value={rt}>
+                          {rt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
 
             {discoverProblems.length === 0 ? (
@@ -496,28 +859,40 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
                 </p>
                 <p className="text-xs text-slate-400">
                   {problems.length === 0
-                    ? 'Submit a startup, product, research, or website URL to queue a scheduled batch.'
-                    : 'Reset filters or submit a startup, research, or website URL to queue a new batch.'}
+                    ? 'Submit a website URL, PDF document, research paper, or technical docs to queue a scheduled batch.'
+                    : 'Reset filters or submit a resource URL or PDF to queue a new batch.'}
                 </p>
-                <div className="flex justify-center gap-2">
+                <div className="flex flex-wrap justify-center gap-2">
                   {problems.length > 0 && (
                     <button
                       type="button"
                       onClick={() => {
                         setDiscoverStatusFilter('All');
                         setDiscoverIndustryFilter('All');
+                        setDiscoverRegionFilter('Global');
+                        setDiscoverCountryFilter('All');
+                        setDiscoverSeverityFilter('All');
+                        setDiscoverVerificationFilter('All');
+                        setDiscoverResourceTypeFilter('All');
                       }}
                       className="px-4 py-2 rounded-xl bg-[#0A1633] border border-[#1E386E] text-xs font-semibold text-slate-200 cursor-pointer"
                     >
-                      Show All Problems
+                      Reset All Filters
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => onOpenSubmit({ kind: 'pdf' })}
+                    className="px-4 py-2 rounded-xl bg-[#0A1633] border border-[#1E386E] text-sky-300 text-xs font-bold cursor-pointer"
+                  >
+                    Upload PDF Document
+                  </button>
                   <button
                     type="button"
                     onClick={() => onOpenSubmit({ kind: 'resource' })}
                     className="px-4 py-2 rounded-xl btn-royal text-white text-xs font-bold cursor-pointer"
                   >
-                    Submit Resource Link
+                    Submit Resource URL
                   </button>
                 </div>
               </div>
@@ -525,6 +900,7 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {discoverProblems.map((prob) => {
                   const problemMatchCount = matches.filter((m) => m.problemId === prob.id).length;
+                  const probVerif: VerificationStatus = prob.verificationStatus || 'AI Identified';
                   return (
                     <div
                       key={prob.id}
@@ -543,15 +919,33 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
                               </div>
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setDiscoverStatusFilter(prob.solutionStatus)}
-                            className={`px-2.5 py-1 rounded-lg border text-[10px] font-bold shrink-0 whitespace-nowrap cursor-pointer ${problemSolutionStatusBadge(
-                              prob.solutionStatus
-                            )}`}
-                          >
-                            {prob.solutionStatus}
-                          </button>
+                          <div className="flex flex-wrap items-center justify-end gap-1.5 shrink-0">
+                            <span
+                              className={`px-2 py-0.5 rounded-md border text-[10px] font-bold ${verificationStatusBadge(
+                                probVerif
+                              )}`}
+                            >
+                              {probVerif}
+                            </span>
+                            {prob.severity && (
+                              <span
+                                className={`px-2 py-0.5 rounded-md border text-[10px] font-bold ${severityBadge(
+                                  prob.severity
+                                )}`}
+                              >
+                                {prob.severity}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setDiscoverStatusFilter(prob.solutionStatus)}
+                              className={`px-2 py-0.5 rounded-md border text-[10px] font-bold whitespace-nowrap cursor-pointer ${problemSolutionStatusBadge(
+                                prob.solutionStatus
+                              )}`}
+                            >
+                              {prob.solutionStatus}
+                            </button>
+                          </div>
                         </div>
 
                         <button
@@ -605,7 +999,7 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
                           onClick={() => onSelectProblem(prob)}
                           className="text-[#38BDF8] font-bold hover:underline cursor-pointer"
                         >
-                          Inspect Brief →
+                          Inspect Brief &amp; Review →
                         </button>
                       </div>
                     </div>
@@ -618,81 +1012,267 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
 
         {discoverTab === 'batches' && (
           <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-slate-400">
-                Submitted resource links are processed in scheduled batches with a 24–48h feedback
-                window.
-              </p>
-              <button
-                type="button"
-                onClick={() => onOpenSubmit({ kind: 'resource' })}
-                className="px-4 py-2 rounded-xl btn-royal text-white text-xs font-bold cursor-pointer"
-              >
-                + Queue Resource Link
-              </button>
-            </div>
-
-            {submissions.length === 0 ? (
-              <div className="glass-card p-8 rounded-2xl text-center space-y-3">
-                <p className="text-sm font-bold text-white">No resource links queued yet</p>
-                <p className="text-xs text-slate-400">
-                  Submit a startup, product, research paper, or website URL to start batch analysis.
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs text-slate-300">
+                  Submitted URLs &amp; PDFs enter processing queues. Actual PDF extraction, OCR, and AI discovery execute strictly via the backend service.
                 </p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Backend status: <strong className="text-amber-300">{getBackendStatusLabel()}</strong>
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBackendContracts((p) => !p)}
+                  className="px-3.5 py-2 rounded-xl bg-[#0A1633] border border-[#1E386E] hover:border-sky-400/50 text-xs font-semibold text-slate-200 flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <Server className="w-3.5 h-3.5 text-[#38BDF8]" />
+                  <span>{showBackendContracts ? 'Hide API Contracts' : 'Backend API Contracts'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenSubmit({ kind: 'pdf' })}
+                  className="px-3.5 py-2 rounded-xl bg-[#0A1633] border border-[#1E386E] hover:border-sky-400/50 text-sky-300 text-xs font-bold flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Upload PDF</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => onOpenSubmit({ kind: 'resource' })}
                   className="px-4 py-2 rounded-xl btn-royal text-white text-xs font-bold cursor-pointer"
                 >
-                  Submit Resource Link
+                  + Queue URL
                 </button>
+              </div>
+            </div>
+
+            {showBackendContracts && (
+              <div className="glass-card p-5 rounded-2xl border border-sky-400/25 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+                      <Server className="w-4 h-4 text-[#38BDF8]" />
+                      <span>Gloweave {APP_VERSION} — Modular Backend API Contracts</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Frontend components use these documented contracts cleanly and surface Awaiting Backend states when <code className="text-sky-300">VITE_BACKEND_API_URL</code> is not configured.
+                    </p>
+                  </div>
+                  <span
+                    className={`px-2.5 py-1 rounded-lg border text-[10px] font-bold ${
+                      isBackendConfigured()
+                        ? 'bg-emerald-500/15 border-emerald-400/40 text-emerald-300'
+                        : 'bg-amber-500/15 border-amber-400/35 text-amber-300'
+                    }`}
+                  >
+                    {isBackendConfigured() ? 'Backend Configured' : 'Awaiting Backend Integration'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-[11px]">
+                  {BACKEND_API_CONTRACTS.map((spec) => (
+                    <div
+                      key={spec.id}
+                      className="p-3 rounded-xl bg-[#040A1A] border border-[#1E386E] space-y-1"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-white">{spec.capability}</span>
+                        <span className="px-1.5 py-0.5 rounded bg-sky-500/15 border border-sky-400/30 font-mono text-[10px] text-[#38BDF8]">
+                          {spec.method} {spec.path}
+                        </span>
+                      </div>
+                      <p className="text-slate-400">{spec.notes}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {submissions.length === 0 ? (
+              <div className="glass-card p-8 rounded-2xl text-center space-y-3">
+                <p className="text-sm font-bold text-white">No URLs or PDFs queued yet</p>
+                <p className="text-xs text-slate-400">
+                  Submit a website URL, research paper, technical documentation, product site, or PDF document to start batch analysis.
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onOpenSubmit({ kind: 'pdf' })}
+                    className="px-4 py-2 rounded-xl bg-[#0A1633] border border-[#1E386E] text-sky-300 text-xs font-bold cursor-pointer"
+                  >
+                    Upload PDF Document
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onOpenSubmit({ kind: 'resource' })}
+                    className="px-4 py-2 rounded-xl btn-royal text-white text-xs font-bold cursor-pointer"
+                  >
+                    Submit Resource URL
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {submissions.map((sub) => (
-                  <div key={sub.id} className="glass-card p-5 rounded-2xl space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="px-2.5 py-0.5 rounded-md bg-[#0A1633] border border-[#1E386E] text-[11px] font-bold text-[#38BDF8]">
-                        {sub.kind}
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-md bg-sky-500/15 border border-sky-400/35 text-[11px] font-bold text-sky-300 flex items-center space-x-1">
-                        <Clock className="w-3 h-3" />
-                        <span>{sub.status}</span>
-                      </span>
-                    </div>
-                    <div>
-                      <a
-                        href={sub.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs font-mono text-white hover:text-[#38BDF8] break-all flex items-center space-x-1.5"
-                      >
-                        <Link2 className="w-3.5 h-3.5 text-[#38BDF8] shrink-0" />
-                        <span>{sub.url}</span>
-                      </a>
-                      {sub.optionalContext && (
-                        <p className="text-xs text-slate-300 mt-2">{sub.optionalContext}</p>
-                      )}
-                    </div>
-                    <div className="space-y-1.5 pt-1">
-                      <div className="flex items-center justify-between text-[11px] text-slate-400">
-                        <span>{sub.batchWindow}</span>
-                        <span className="text-white font-semibold tabular-nums">
-                          {sub.progressPercent}%
+                {submissions.map((sub) => {
+                  const isPdf = sub.submissionFormat === 'pdf';
+                  const isPreviewOpen = previewPdfSubmissionId === sub.id;
+                  return (
+                    <div key={sub.id} className="glass-card p-5 rounded-2xl space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="px-2.5 py-0.5 rounded-md bg-[#0A1633] border border-[#1E386E] text-[11px] font-bold text-[#38BDF8]">
+                          {sub.kind}
                         </span>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`px-2 py-0.5 rounded-md border text-[10px] font-bold ${
+                              sub.backendSyncState === 'synced'
+                                ? 'bg-emerald-500/15 border-emerald-400/40 text-emerald-300'
+                                : sub.backendSyncState === 'error'
+                                ? 'bg-rose-500/15 border-rose-400/40 text-rose-300'
+                                : 'bg-amber-500/15 border-amber-400/35 text-amber-300'
+                            }`}
+                          >
+                            {sub.backendSyncState === 'synced'
+                              ? 'Synced'
+                              : sub.backendSyncState === 'error'
+                              ? 'Sync Error'
+                              : 'Awaiting Backend'}
+                          </span>
+                          <span className="px-2.5 py-0.5 rounded-md bg-sky-500/15 border border-sky-400/35 text-[11px] font-bold text-sky-300 flex items-center space-x-1">
+                            <Clock className="w-3 h-3" />
+                            <span>{sub.status}</span>
+                          </span>
+                        </div>
                       </div>
-                      <div className="h-1.5 rounded-full bg-[#040A1A] overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-[#0066FF] to-[#22D3EE]"
-                          style={{ width: `${sub.progressPercent}%` }}
-                        />
+
+                      <div>
+                        {isPdf && sub.pdfMeta ? (
+                          <div className="space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center space-x-2 min-w-0">
+                                <FileText className="w-4 h-4 text-[#38BDF8] shrink-0" />
+                                <div className="min-w-0">
+                                  <div className="text-xs font-bold text-white truncate">
+                                    {sub.pdfMeta.fileName}
+                                  </div>
+                                  <div className="text-[11px] text-slate-400">
+                                    {(sub.pdfMeta.fileSizeBytes / 1024).toFixed(1)} KB ·{' '}
+                                    {sub.pdfMeta.mimeType}
+                                    {sub.pdfMeta.pageCount ? ` · ${sub.pdfMeta.pageCount} pages` : ''}
+                                  </div>
+                                </div>
+                              </div>
+                              {sub.pdfMeta.previewObjectUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setPreviewPdfSubmissionId(isPreviewOpen ? null : sub.id)
+                                  }
+                                  className="px-2.5 py-1 rounded-lg bg-[#0A1633] border border-[#1E386E] text-[11px] font-semibold text-[#38BDF8] flex items-center space-x-1 shrink-0 cursor-pointer"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                  <span>{isPreviewOpen ? 'Close' : 'Preview'}</span>
+                                </button>
+                              )}
+                            </div>
+
+                            {isPreviewOpen && sub.pdfMeta.previewObjectUrl && (
+                              <div className="rounded-xl overflow-hidden border border-[#1E386E] bg-slate-950 h-56">
+                                <iframe
+                                  src={sub.pdfMeta.previewObjectUrl}
+                                  title={`PDF Preview ${sub.pdfMeta.fileName}`}
+                                  className="w-full h-full"
+                                />
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-2 gap-2 text-[11px]">
+                              <div className="p-2 rounded-lg bg-[#040A1A] border border-[#1E386E]">
+                                <span className="text-slate-400 block">PDF Extraction</span>
+                                <strong className="text-amber-300">
+                                  {sub.extractionStatus || 'Awaiting Backend Service'}
+                                </strong>
+                              </div>
+                              <div className="p-2 rounded-lg bg-[#040A1A] border border-[#1E386E]">
+                                <span className="text-slate-400 block">OCR Status</span>
+                                <strong className="text-sky-300">
+                                  {sub.ocrStatus || 'Awaiting Backend Service'}
+                                </strong>
+                              </div>
+                            </div>
+
+                            <div className="p-2.5 rounded-xl bg-[#040A1A]/85 border border-[#1E386E] text-[11px]">
+                              <span className="font-semibold text-slate-300 block mb-0.5">
+                                Extracted Content Review
+                              </span>
+                              {sub.extractedPreviewText ? (
+                                <p className="text-slate-300 whitespace-pre-wrap max-h-28 overflow-y-auto">
+                                  {sub.extractedPreviewText}
+                                </p>
+                              ) : (
+                                <p className="text-slate-400">
+                                  No extracted text available yet — real PDF text extraction and OCR run strictly on the backend worker (`GET /api/submissions/:id/extraction`).
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <a
+                            href={sub.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs font-mono text-white hover:text-[#38BDF8] break-all flex items-center space-x-1.5"
+                          >
+                            <Link2 className="w-3.5 h-3.5 text-[#38BDF8] shrink-0" />
+                            <span>{sub.url}</span>
+                          </a>
+                        )}
+                        {sub.optionalContext && (
+                          <p className="text-xs text-slate-300 mt-2">{sub.optionalContext}</p>
+                        )}
+                        {sub.errorMessage && (
+                          <div className="mt-2 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-[11px] text-rose-300 flex items-center space-x-2">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                            <span>{sub.errorMessage}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex items-center justify-between text-[11px] text-slate-400">
+                          <span>{sub.batchWindow}</span>
+                          <span className="text-white font-semibold tabular-nums">
+                            {sub.progressPercent}%
+                          </span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-[#040A1A] overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-[#0066FF] to-[#22D3EE]"
+                            style={{ width: `${sub.progressPercent}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400 pt-2 border-t border-slate-800/80">
+                        <span>Submitted {sub.submittedAt}</span>
+                        <div className="flex items-center gap-2">
+                          {isPdf && onRetrySubmission && (
+                            <button
+                              type="button"
+                              onClick={() => onRetrySubmission(sub.id)}
+                              className="px-2.5 py-1 rounded-lg bg-[#0A1633] border border-[#1E386E] hover:border-sky-400/50 text-[#38BDF8] font-semibold flex items-center space-x-1 cursor-pointer"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              <span>Check / Retry Extraction</span>
+                            </button>
+                          )}
+                          <span className="text-[#38BDF8] font-semibold">{sub.etaLabel}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/80">
-                      <span>Submitted {sub.submittedAt}</span>
-                      <span className="text-[#38BDF8] font-semibold">{sub.etaLabel}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
@@ -728,7 +1308,7 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
                       <p className="text-xs text-slate-300 line-clamp-2">{sol.tagline}</p>
                     </div>
                     <div className="w-full flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs text-slate-400">
-                      <span>{sol.usersCount}</span>
+                      <span>{sol.country}</span>
                       <span className="text-amber-400 font-bold tabular-nums">★ {sol.rating}</span>
                     </div>
                   </button>
@@ -758,7 +1338,7 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
                       </div>
                       <p className="text-xs text-slate-400">{st.description}</p>
                       <p className="text-[11px] text-slate-500">
-                        {st.sector} · {st.country} · {st.users}
+                        {st.sector} · {st.country}, {st.region}
                       </p>
                     </div>
                     <a
@@ -1034,15 +1614,33 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
                           <h3 className="text-sm font-bold text-white">{sol.name}</h3>
                           <p className="text-xs text-[#38BDF8] mt-0.5">{sol.tagline}</p>
                         </div>
-                        <span
-                          className={`px-2.5 py-1 rounded-lg border text-[10px] font-bold shrink-0 whitespace-nowrap ${solutionStatusBadge(
-                            sol.status
-                          )}`}
-                        >
-                          {sol.status}
-                        </span>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-lg border text-[10px] font-bold whitespace-nowrap ${solutionStatusBadge(
+                              sol.status
+                            )}`}
+                          >
+                            {sol.status}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded border text-[9px] font-bold whitespace-nowrap ${verificationStatusBadge(
+                              sol.humanReviewStatus || (sol.verified ? 'Verified' : 'Awaiting Review')
+                            )}`}
+                          >
+                            Human: {sol.humanReviewStatus || (sol.verified ? 'Verified' : 'Awaiting Review')}
+                          </span>
+                        </div>
                       </div>
-                      <p className="text-xs text-slate-300 leading-relaxed">{sol.evidenceSummary}</p>
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        {sol.addressExplanation || sol.evidenceSummary}
+                      </p>
+                      <div className="text-[11px] text-slate-400">
+                        AI Assessment:{' '}
+                        <strong className="text-amber-300">
+                          {sol.aiAssessmentStatus || 'Pending Batch Assessment'}
+                        </strong>
+                        {sol.supportingDocumentName ? ` · PDF: ${sol.supportingDocumentName}` : ''}
+                      </div>
                     </button>
 
                     {targetProb && (
@@ -1101,6 +1699,10 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
   // 5. STARTUPS DIRECTORY
   // =========================================================
   if (activeView === 'startups') {
+    const backendFeaturedStartups = startups
+      .filter((st) => st.featuredByBackend)
+      .sort((a, b) => (b.usefulnessScore || 0) - (a.usefulnessScore || 0));
+
     return (
       <div className="space-y-6 pb-10">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1132,6 +1734,70 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
             </button>
           </div>
         </div>
+
+        {backendFeaturedStartups.length > 0 && (
+          <div className="glass-card rounded-2xl p-5 border border-amber-400/25 bg-gradient-to-br from-[#0A1838]/95 via-[#07122B] to-[#0B1C3A]/95 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <span className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-400/35 flex items-center justify-center shrink-0">
+                  <Award className="w-4 h-4 text-amber-300" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-extrabold text-white">
+                    Featured Startups · Ranked by Impact &amp; Usefulness
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Selected automatically by Gloweave backend usefulness scoring (verified evidence &amp; confirmed problem solves). Founders cannot self-feature listings.
+                  </p>
+                </div>
+              </div>
+              <span className="self-start sm:self-center px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-400/30 text-[10px] font-bold text-amber-300 whitespace-nowrap">
+                Backend Ranked
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              {backendFeaturedStartups.map((st, idx) => (
+                <div
+                  key={st.id}
+                  className="p-4 rounded-xl bg-[#050D22]/90 border border-[#1E386E] flex flex-col justify-between gap-3"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-400/30 text-[10px] font-bold text-amber-300">
+                        #{idx + 1} Featured
+                      </span>
+                      <span className="text-[11px] font-bold text-emerald-400 tabular-nums">
+                        {st.usefulnessScore ?? 90}/100 usefulness
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">{st.name}</h4>
+                      <p className="text-[11px] text-[#38BDF8] mt-0.5">
+                        {st.sector} · {st.stage} · {st.country}
+                      </p>
+                    </div>
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      {st.featuredReason || st.description}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between pt-2.5 border-t border-slate-800/80 text-[11px]">
+                    <span className="text-slate-400 font-medium">Indexed {st.submittedAt}</span>
+                    <a
+                      href={st.websiteUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[#38BDF8] font-bold flex items-center gap-1 hover:underline"
+                    >
+                      <span>Visit</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {filteredStartups.length === 0 ? (
           <div className="glass-card p-8 rounded-2xl text-center space-y-3">
@@ -1169,9 +1835,15 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
                       {st.sector} · {st.stage} · {st.country}, {st.region}
                     </p>
                   </div>
-                  <span className="text-xs font-bold text-emerald-400 tabular-nums">
-                    {st.users} users
-                  </span>
+                  {st.featuredByBackend && typeof st.usefulnessScore === 'number' ? (
+                    <span className="px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-400/35 text-[10px] font-bold text-amber-300 shrink-0 tabular-nums">
+                      {st.usefulnessScore}% useful
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-md bg-[#0A1633] border border-[#1E386E] text-[10px] font-semibold text-sky-300 shrink-0">
+                      {st.stage}
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed">{st.description}</p>
                 <div className="flex items-center justify-between pt-3 border-t border-slate-800/80 text-xs">
@@ -1216,7 +1888,11 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
         if (rankingCategory !== 'All' && st.sector !== rankingCategory) return false;
         return true;
       })
-      .sort((a, b) => b.usersNum - a.usersNum);
+      .sort(
+        (a, b) =>
+          (b.usefulnessScore || 0) - (a.usefulnessScore || 0) ||
+          (b.featuredByBackend ? 1 : 0) - (a.featuredByBackend ? 1 : 0)
+      );
 
     const rankedSolutions = solutions
       .filter((s) => {
@@ -1225,7 +1901,7 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
         if (rankingCategory !== 'All' && s.category !== rankingCategory) return false;
         return true;
       })
-      .sort((a, b) => b.rating - a.rating || b.usersNum - a.usersNum);
+      .sort((a, b) => b.rating - a.rating || (b.verified ? 1 : 0) - (a.verified ? 1 : 0));
 
     const resetRankingFilters = () => {
       setRankingRegion('Global');
@@ -1427,9 +2103,13 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
                     </div>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <span className="text-xs font-bold text-emerald-400 tabular-nums">
-                      {st.users} users
-                    </span>
+                    {typeof st.usefulnessScore === 'number' ? (
+                      <span className="text-xs font-bold text-amber-300 tabular-nums">
+                        {st.usefulnessScore}% useful
+                      </span>
+                    ) : (
+                      <span className="text-xs font-semibold text-slate-400">{st.stage}</span>
+                    )}
                     <a
                       href={st.websiteUrl}
                       target="_blank"
@@ -1479,7 +2159,7 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
                     <div>
                       <h3 className="text-sm font-bold text-white">{sol.name}</h3>
                       <p className="text-xs text-slate-400">
-                        {sol.category} · {sol.country}, {sol.region} · {sol.usersCount}
+                        {sol.category} · {sol.country}, {sol.region} · {sol.status}
                       </p>
                     </div>
                   </div>
@@ -1618,7 +2298,16 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
       : [0, 0, 0, 0, 0, 0, 0];
 
     const totalCountries = new Set(
-      [...problems.map((p) => p.country), ...solutions.map((s) => s.country), ...startups.map((st) => st.country)].filter(Boolean)
+      [
+        ...problems.map((p) => p.country),
+        ...solutions.map((s) => s.country),
+        ...startups.map((st) => st.country),
+        ...contributors.map((c) => c.country),
+        ...matches.map((m) => m.country),
+        ...(profileLocation ? [profileLocation] : []),
+      ]
+        .map((c) => c.trim())
+        .filter(Boolean)
     ).size;
     const totalNodes = regions.reduce((sum, r) => sum + r.activeNodes, 0);
 
@@ -1744,111 +2433,625 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
   }
 
   // =========================================================
-  // 9. MESSAGES
+  // 9. MESSAGES (Contact List -> Drill-In Single Contact Chat Room)
   // =========================================================
   if (activeView === 'messages') {
-    return (
-      <div className="space-y-6 pb-10">
-        <div>
-          <h2 className="text-2xl font-extrabold text-white">Messages</h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Direct collaboration threads with global contributors
-          </p>
-        </div>
+    const filteredContacts = messages.filter((thread) => {
+      const cq = contactSearch.trim().toLowerCase();
+      if (!cq) return true;
+      return (
+        thread.senderName.toLowerCase().includes(cq) ||
+        thread.senderRole.toLowerCase().includes(cq) ||
+        thread.messages.some((m) => m.text.toLowerCase().includes(cq))
+      );
+    });
 
-        {messages.length === 0 ? (
-          <div className="glass-card rounded-2xl p-8 text-center space-y-2">
-            <p className="text-sm font-bold text-white">0 conversations yet</p>
-            <p className="text-xs text-slate-400">
-              Start a conversation from the Community directory when contributors join.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-4 glass-card rounded-2xl divide-y divide-slate-800/80 overflow-hidden">
-              {messages.map((thread) => (
-                <button
-                  key={thread.id}
-                  type="button"
-                  onClick={() => onSelectThread(thread.id)}
-                  className={`w-full text-left p-4 flex items-start space-x-3 transition cursor-pointer ${
-                    activeThread?.id === thread.id ? 'bg-[#0066FF]/20' : 'hover:bg-white/[0.03]'
-                  }`}
-                >
-                  <AvatarBadge
-                    initials={thread.senderInitials}
-                    accentFrom={thread.accentFrom}
-                    accentTo={thread.accentTo}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-white truncate">
-                        {thread.senderName}
-                      </span>
-                      <span className="text-[10px] text-slate-500">{thread.timestamp}</span>
-                    </div>
-                    <p className="text-[11px] text-slate-400 truncate mt-1">
-                      {thread.messages[thread.messages.length - 1]?.text}
-                    </p>
-                  </div>
-                  {thread.unread && <span className="w-2 h-2 rounded-full bg-[#38BDF8] mt-1.5" />}
-                </button>
-              ))}
+    const getLastMessagePreview = (thread: MessageThread) => {
+      const last = thread.messages[thread.messages.length - 1];
+      if (!last) return 'Tap to start chatting';
+      if (last.text) return last.text;
+      const firstAtt = last.attachments?.[0];
+      if (!firstAtt) return 'Attachment shared';
+      if (firstAtt.type === 'image') return `Shared a picture${firstAtt.title ? `: ${firstAtt.title}` : ''}`;
+      if (firstAtt.type === 'pdf') return `Shared PDF: ${firstAtt.title || 'Document.pdf'}`;
+      return `Shared link: ${firstAtt.title || firstAtt.url || 'Resource'}`;
+    };
+
+    return (
+      <div className="space-y-5 pb-10">
+        {!activeThread ? (
+          <>
+            {/* SCREEN A: CONTACTS / CONVERSATIONS LIST */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-extrabold text-white">Messages</h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Tap any contact to open their message room and share pictures, PDFs, or product links
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onSelectView('community')}
+                className="px-4 py-2 rounded-xl bg-[#0A1633] border border-[#1E386E] hover:border-sky-400/50 text-xs font-bold text-[#38BDF8] flex items-center gap-1.5 self-start sm:self-center cursor-pointer"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Message Someone from Community</span>
+              </button>
             </div>
 
-            <div className="lg:col-span-8 glass-card rounded-2xl p-5 flex flex-col justify-between min-h-[380px]">
-              {activeThread && (
-                <>
-                  <div className="pb-4 border-b border-slate-800/80 flex items-center space-x-3">
-                    <AvatarBadge
-                      initials={activeThread.senderInitials}
-                      accentFrom={activeThread.accentFrom}
-                      accentTo={activeThread.accentTo}
-                    />
-                    <div>
-                      <h3 className="text-sm font-bold text-white">{activeThread.senderName}</h3>
-                      <p className="text-[11px] text-slate-400">{activeThread.senderRole}</p>
+            {!authenticatedUser && (
+              <div className="p-4 rounded-2xl bg-sky-500/10 border border-sky-400/35 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <p className="text-xs text-slate-200">
+                  <strong className="text-[#38BDF8]">Review Mode:</strong> You can open and read
+                  conversations freely. Sign in before sending messages, uploading pictures/PDFs, or summarizing shared links.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onRequireAuth?.('send direct messages and attachments')}
+                  className="px-4 py-2 rounded-xl btn-royal text-white text-xs font-bold shrink-0 cursor-pointer"
+                >
+                  Sign In to Message
+                </button>
+              </div>
+            )}
+
+            {messages.length === 0 ? (
+              <div className="glass-card rounded-2xl p-8 text-center space-y-3">
+                <p className="text-sm font-bold text-white">0 conversations yet</p>
+                <p className="text-xs text-slate-400">
+                  Open the Community directory to message a solver, founder, or researcher.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onSelectView('community')}
+                  className="px-4 py-2 rounded-xl btn-royal text-white text-xs font-bold cursor-pointer"
+                >
+                  Browse Community
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={contactSearch}
+                    onChange={(e) => setContactSearch(e.target.value)}
+                    placeholder="Search contacts by name, role, or message..."
+                    className="w-full bg-[#061028] border border-[#1E386E] rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-sky-400"
+                  />
+                </div>
+
+                <div className="glass-card rounded-2xl divide-y divide-slate-800/80 overflow-hidden">
+                  {filteredContacts.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-slate-400">
+                      No contacts match "{contactSearch}".
+                    </div>
+                  ) : (
+                    filteredContacts.map((thread) => {
+                      const lastMsg = thread.messages[thread.messages.length - 1];
+                      const attCount = lastMsg?.attachments?.length || 0;
+                      return (
+                        <button
+                          key={thread.id}
+                          type="button"
+                          onClick={() => onSelectThread(thread.id)}
+                          className="w-full text-left p-4 flex items-center gap-3.5 hover:bg-white/[0.04] transition cursor-pointer group"
+                        >
+                          <AvatarBadge
+                            initials={thread.senderInitials}
+                            accentFrom={thread.accentFrom}
+                            accentTo={thread.accentTo}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-sm font-bold text-white truncate">
+                                  {thread.senderName}
+                                </span>
+                                {thread.unread && (
+                                  <span className="px-1.5 py-0.5 rounded bg-sky-500/20 border border-sky-400/40 text-[10px] font-bold text-[#38BDF8] shrink-0">
+                                    New
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[11px] text-slate-500 shrink-0">
+                                {thread.timestamp}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-[#38BDF8] truncate mt-0.5">
+                              {thread.senderRole}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-xs text-slate-400 truncate flex-1">
+                                {getLastMessagePreview(thread)}
+                              </p>
+                              {attCount > 0 && (
+                                <span className="px-1.5 py-0.5 rounded bg-[#0A1633] border border-[#1E386E] text-[10px] text-slate-300 shrink-0">
+                                  {attCount} {attCount === 1 ? 'attachment' : 'attachments'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-sky-400 group-hover:translate-x-0.5 transition shrink-0" />
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {/* SCREEN B: INSIDE DEDICATED CONTACT MESSAGE ROOM */}
+            <div className="glass-card rounded-2xl overflow-hidden flex flex-col min-h-[70vh] max-h-[82vh]">
+              {/* Room Header */}
+              <div className="px-4 sm:px-5 py-3.5 border-b border-slate-800/80 bg-[#07122B]/90 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectThread(null);
+                      setShowLinkInput(false);
+                      setChatLinkError('');
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl bg-[#0A1633] border border-[#1E386E] hover:border-sky-400/50 text-xs font-bold text-slate-200 flex items-center gap-1.5 shrink-0 cursor-pointer"
+                    aria-label="Back to contacts list"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Contacts</span>
+                  </button>
+                  <AvatarBadge
+                    initials={activeThread.senderInitials}
+                    accentFrom={activeThread.accentFrom}
+                    accentTo={activeThread.accentTo}
+                  />
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-extrabold text-white truncate">
+                      {activeThread.senderName}
+                    </h3>
+                    <p className="text-[11px] text-slate-400 truncate">
+                      {activeThread.senderRole}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {!authenticatedUser && (
+                    <button
+                      type="button"
+                      onClick={() => onRequireAuth?.('send direct messages and attachments')}
+                      className="px-3 py-1.5 rounded-lg btn-royal text-white text-[11px] font-bold cursor-pointer"
+                    >
+                      Sign In to Reply
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Message Feed */}
+              <div className="flex-1 p-4 sm:p-5 space-y-4 overflow-y-auto bg-[#040B1B]/60">
+                {activeThread.messages.map((m) => (
+                  <div
+                    key={m.id}
+                    className={`flex ${m.fromSelf ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[90%] sm:max-w-lg rounded-2xl px-4 py-3 text-xs leading-relaxed space-y-2.5 ${
+                        m.fromSelf
+                          ? 'bg-gradient-to-br from-[#0055E5] to-[#0077FF] text-white shadow-lg shadow-blue-950/40'
+                          : 'bg-[#08132D] border border-[#1E386E] text-slate-200'
+                      }`}
+                    >
+                      {m.text && <p className="whitespace-pre-wrap break-words">{m.text}</p>}
+
+                      {/* Rich Attachments inside Bubble */}
+                      {m.attachments && m.attachments.length > 0 && (
+                        <div className="space-y-2.5 pt-0.5">
+                          {m.attachments.map((att) => {
+                            if (att.type === 'image' && att.url) {
+                              return (
+                                <div
+                                  key={att.id}
+                                  className="rounded-xl overflow-hidden border border-white/15 bg-black/25"
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setPreviewImageAttachment({
+                                        url: att.url!,
+                                        title: att.title,
+                                      })
+                                    }
+                                    className="block w-full text-left cursor-pointer group"
+                                  >
+                                    <img
+                                      src={att.url}
+                                      alt={att.title || 'Shared image'}
+                                      className="max-h-60 w-full object-cover group-hover:opacity-95 transition"
+                                    />
+                                    <div className="px-2.5 py-1.5 flex items-center justify-between text-[10px] text-slate-200 bg-black/40">
+                                      <span className="truncate flex items-center gap-1">
+                                        <ImageIcon className="w-3 h-3 text-sky-300 shrink-0" />
+                                        <span className="truncate">{att.title || 'Picture'}</span>
+                                      </span>
+                                      <span className="text-sky-300 font-semibold shrink-0 ml-2">
+                                        {formatChatFileSize(att.fileSizeBytes) || 'Preview'}
+                                      </span>
+                                    </div>
+                                  </button>
+                                </div>
+                              );
+                            }
+
+                            if (att.type === 'pdf') {
+                              return (
+                                <div
+                                  key={att.id}
+                                  className="p-3 rounded-xl bg-[#050D22]/85 border border-sky-400/25 flex items-center justify-between gap-3"
+                                >
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <span className="w-8 h-8 rounded-lg bg-rose-500/15 border border-rose-400/30 flex items-center justify-center shrink-0">
+                                      <FileText className="w-4 h-4 text-rose-300" />
+                                    </span>
+                                    <div className="min-w-0">
+                                      <p className="text-[11px] font-bold text-white truncate">
+                                        {att.title || 'Document.pdf'}
+                                      </p>
+                                      <p className="text-[10px] text-slate-400">
+                                        PDF Document
+                                        {att.fileSizeBytes
+                                          ? ` · ${formatChatFileSize(att.fileSizeBytes)}`
+                                          : ''}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  {att.url ? (
+                                    <a
+                                      href={att.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="px-2.5 py-1.5 rounded-lg bg-[#0A1A3F] border border-sky-400/35 text-[10px] font-bold text-[#38BDF8] hover:bg-[#102452] shrink-0 flex items-center gap-1"
+                                    >
+                                      <Eye className="w-3 h-3" />
+                                      <span>Open PDF</span>
+                                    </a>
+                                  ) : (
+                                    <span className="px-2 py-1 rounded-md bg-slate-800/80 text-[10px] text-slate-300 shrink-0">
+                                      PDF Attached
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            }
+
+                            if (att.type === 'link' && att.url) {
+                              const summaryState = att.linkSummary?.status || 'idle';
+                              return (
+                                <div
+                                  key={att.id}
+                                  className="p-3 rounded-xl bg-[#050D22]/90 border border-sky-400/30 space-y-2.5"
+                                >
+                                  <div className="flex items-start justify-between gap-2.5">
+                                    <div className="flex items-start gap-2 min-w-0">
+                                      <span className="w-7 h-7 rounded-lg bg-sky-500/15 border border-sky-400/30 flex items-center justify-center shrink-0 mt-0.5">
+                                        <Link2 className="w-3.5 h-3.5 text-[#38BDF8]" />
+                                      </span>
+                                      <div className="min-w-0">
+                                        <p className="text-[11px] font-bold text-white truncate">
+                                          {att.title || extractDomainLabel(att.url)}
+                                        </p>
+                                        <a
+                                          href={att.url}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="text-[10px] text-[#38BDF8] hover:underline break-all flex items-center gap-1"
+                                        >
+                                          <span className="truncate">{att.url}</span>
+                                          <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+                                        </a>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <button
+                                      type="button"
+                                      disabled={summaryState === 'loading'}
+                                      onClick={() =>
+                                        onSummarizeMessageLink(
+                                          activeThread.id,
+                                          m.id,
+                                          att.id,
+                                          att.url!
+                                        )
+                                      }
+                                      className="px-3 py-1.5 rounded-lg bg-sky-500/15 border border-sky-400/40 hover:bg-sky-500/25 text-[11px] font-bold text-[#38BDF8] flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                                    >
+                                      {summaryState === 'loading' ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        <Sparkles className="w-3 h-3" />
+                                      )}
+                                      <span>
+                                        {summaryState === 'loading'
+                                          ? 'Summarizing Inner Link...'
+                                          : summaryState === 'ready'
+                                          ? 'Refresh Inner Link Summary'
+                                          : 'Summarize Inner Link'}
+                                      </span>
+                                    </button>
+                                  </div>
+
+                                  {summaryState === 'ready' && att.linkSummary?.summary && (
+                                    <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-400/30 space-y-1.5 text-[11px]">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <span className="font-bold text-emerald-300">
+                                          Backend Link Summary
+                                        </span>
+                                        {att.linkSummary.pageTitle && (
+                                          <span className="text-[10px] text-slate-300 truncate">
+                                            {att.linkSummary.pageTitle}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-slate-200 leading-relaxed">
+                                        {att.linkSummary.summary}
+                                      </p>
+                                      {att.linkSummary.keyPoints &&
+                                        att.linkSummary.keyPoints.length > 0 && (
+                                          <ul className="list-disc pl-4 space-y-0.5 text-[10px] text-slate-300">
+                                            {att.linkSummary.keyPoints.map((kp, i) => (
+                                              <li key={i}>{kp}</li>
+                                            ))}
+                                          </ul>
+                                        )}
+                                    </div>
+                                  )}
+
+                                  {summaryState === 'awaiting-backend' && (
+                                    <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-400/30 space-y-1 text-[10px] text-amber-200">
+                                      <p className="font-bold text-amber-300">
+                                        Awaiting Backend Integration
+                                      </p>
+                                      <p className="text-slate-300">
+                                        {att.linkSummary?.errorMessage ||
+                                          'Backend link summarization endpoint (POST /api/messages/summarize-link) is not connected yet.'}
+                                      </p>
+                                    </div>
+                                  )}
+
+                                  {summaryState === 'error' && (
+                                    <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-400/30 space-y-1 text-[10px] text-rose-200">
+                                      <p className="font-bold">Could not summarize link</p>
+                                      <p>{att.linkSummary?.errorMessage || 'Backend request failed.'}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+
+                            return null;
+                          })}
+                        </div>
+                      )}
+
+                      <p className="text-[10px] opacity-75 text-right">{m.time}</p>
                     </div>
                   </div>
+                ))}
+              </div>
 
-                  <div className="flex-1 py-4 space-y-3 overflow-y-auto">
-                    {activeThread.messages.map((m) => (
+              {/* Composer Area */}
+              <div className="p-3.5 sm:p-4 border-t border-slate-800/80 bg-[#07122B]/95 space-y-3">
+                {/* Staged Attachments Preview */}
+                {stagedAttachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {stagedAttachments.map((att) => (
                       <div
-                        key={m.id}
-                        className={`flex ${m.fromSelf ? 'justify-end' : 'justify-start'}`}
+                        key={att.id}
+                        className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#040B1B] border border-sky-400/35 text-[11px] text-slate-200 max-w-full"
                       >
-                        <div
-                          className={`max-w-md rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
-                            m.fromSelf
-                              ? 'btn-royal text-white'
-                              : 'bg-[#040A1A] border border-[#1E386E] text-slate-200'
-                          }`}
+                        {att.type === 'image' && att.url && (
+                          <img
+                            src={att.url}
+                            alt={att.title || 'Staged picture'}
+                            className="w-6 h-6 rounded object-cover shrink-0"
+                          />
+                        )}
+                        {att.type === 'pdf' && (
+                          <FileText className="w-3.5 h-3.5 text-rose-300 shrink-0" />
+                        )}
+                        {att.type === 'link' && (
+                          <Link2 className="w-3.5 h-3.5 text-[#38BDF8] shrink-0" />
+                        )}
+                        <span className="truncate max-w-[180px]">
+                          {att.title || att.url || 'Attachment'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setStagedAttachments((prev) => prev.filter((a) => a.id !== att.id))
+                          }
+                          className="text-slate-400 hover:text-white cursor-pointer"
+                          aria-label="Remove staged attachment"
                         >
-                          <p>{m.text}</p>
-                          <p className="text-[10px] opacity-70 mt-1 text-right">{m.time}</p>
-                        </div>
+                          <X className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     ))}
                   </div>
+                )}
 
-                  <form onSubmit={handleSend} className="pt-3 border-t border-slate-800/80 flex gap-2">
-                    <input
-                      type="text"
-                      value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                      placeholder={`Reply to ${activeThread.senderName}...`}
-                      className="flex-1 bg-[#040A1A] border border-[#1E386E] rounded-xl px-3.5 py-2.5 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-sky-400"
-                    />
-                    <button
-                      type="submit"
-                      className="px-4 py-2.5 rounded-xl btn-royal text-white font-bold text-xs flex items-center space-x-1.5 cursor-pointer"
-                    >
-                      <span>Send</span>
-                      <Send className="w-3.5 h-3.5" />
-                    </button>
-                  </form>
-                </>
-              )}
+                {/* Collapsible Share Product / Resource Link Bar */}
+                {showLinkInput && (
+                  <div className="p-3 rounded-xl bg-[#040B1B] border border-[#1E386E] space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-[#38BDF8]">
+                        Share Product or Resource Link
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowLinkInput(false);
+                          setChatLinkError('');
+                        }}
+                        className="text-slate-400 hover:text-white cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="url"
+                        value={chatLinkUrl}
+                        onChange={(e) => {
+                          setChatLinkUrl(e.target.value);
+                          setChatLinkError('');
+                        }}
+                        placeholder="https://product-or-resource-link.com"
+                        className="bg-[#08132D] border border-[#1E386E] rounded-lg px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-sky-400"
+                      />
+                      <input
+                        type="text"
+                        value={chatLinkTitle}
+                        onChange={(e) => setChatLinkTitle(e.target.value)}
+                        placeholder="Product / link name (optional)"
+                        className="bg-[#08132D] border border-[#1E386E] rounded-lg px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-sky-400"
+                      />
+                    </div>
+                    {chatLinkError && <p className="text-[11px] text-rose-400">{chatLinkError}</p>}
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[10px] text-slate-400">
+                        Recipients can tap "Summarize Inner Link" to inspect what is inside via backend.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleAttachChatLink}
+                        className="px-3 py-1.5 rounded-lg btn-royal text-white text-[11px] font-bold shrink-0 cursor-pointer"
+                      >
+                        Attach Link
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Attachment Buttons + Input Form */}
+                <input
+                  ref={chatImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleChatImageSelect}
+                  className="hidden"
+                />
+                <input
+                  ref={chatPdfInputRef}
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  onChange={handleChatPdfSelect}
+                  className="hidden"
+                />
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!authenticatedUser) {
+                        onRequireAuth?.('share pictures in messages');
+                        return;
+                      }
+                      chatImageInputRef.current?.click();
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#0A1633] border border-[#1E386E] hover:border-sky-400/50 text-[11px] font-semibold text-slate-200 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Picture</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!authenticatedUser) {
+                        onRequireAuth?.('share PDF files in messages');
+                        return;
+                      }
+                      chatPdfInputRef.current?.click();
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-[#0A1633] border border-[#1E386E] hover:border-sky-400/50 text-[11px] font-semibold text-slate-200 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-rose-400" />
+                    <span>PDF File</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!authenticatedUser) {
+                        onRequireAuth?.('share product links in messages');
+                        return;
+                      }
+                      setShowLinkInput((prev) => !prev);
+                    }}
+                    className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer ${
+                      showLinkInput
+                        ? 'bg-sky-500/20 border-sky-400/60 text-[#38BDF8]'
+                        : 'bg-[#0A1633] border-[#1E386E] hover:border-sky-400/50 text-slate-200'
+                    }`}
+                  >
+                    <Link2 className="w-3.5 h-3.5 text-[#38BDF8]" />
+                    <span>Product / Link</span>
+                  </button>
+                </div>
+
+                <form onSubmit={handleSend} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    placeholder={`Message ${activeThread.senderName} or paste a product link...`}
+                    className="flex-1 bg-[#040A1A] border border-[#1E386E] rounded-xl px-3.5 py-2.5 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-sky-400"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2.5 rounded-xl btn-royal text-white font-bold text-xs flex items-center space-x-1.5 cursor-pointer shrink-0"
+                  >
+                    <span>Send</span>
+                    <Send className="w-3.5 h-3.5" />
+                  </button>
+                </form>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Lightbox Preview for Shared Pictures */}
+        {previewImageAttachment && (
+          <div
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setPreviewImageAttachment(null)}
+          >
+            <div
+              className="max-w-3xl w-full bg-[#07122B] border border-[#1E386E] rounded-2xl overflow-hidden shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+                <span className="text-xs font-bold text-white truncate">
+                  {previewImageAttachment.title || 'Shared Picture'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPreviewImageAttachment(null)}
+                  className="p-1 rounded-lg hover:bg-white/10 text-slate-300 cursor-pointer"
+                  aria-label="Close picture preview"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-3 bg-black/40 flex items-center justify-center">
+                <img
+                  src={previewImageAttachment.url}
+                  alt={previewImageAttachment.title || 'Shared picture'}
+                  className="max-h-[75vh] w-auto object-contain rounded-lg"
+                />
+              </div>
             </div>
           </div>
         )}
@@ -1951,12 +3154,35 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
 
   return (
     <div className="space-y-6 pb-10">
+      {!authenticatedUser && (
+        <div className="p-4 rounded-2xl bg-sky-500/10 border border-sky-400/35 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <p className="text-xs text-slate-200 leading-relaxed">
+            <strong className="text-[#38BDF8]">Guest Review Mode:</strong> You can explore Gloweave
+            freely. Sign in or create an account to personalize your profile, save items, post, or
+            message members.
+          </p>
+          <button
+            type="button"
+            onClick={() => onRequireAuth?.('manage your Gloweave profile')}
+            className="px-4 py-2 rounded-xl btn-royal text-white text-xs font-bold shrink-0 cursor-pointer"
+          >
+            Sign In / Create Account
+          </button>
+        </div>
+      )}
+
       <div className="glass-card p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center space-x-4">
           <div className="relative group">
             <button
               type="button"
-              onClick={() => photoInputRef.current?.click()}
+              onClick={() => {
+                if (!authenticatedUser) {
+                  onRequireAuth?.('upload a profile photo');
+                  return;
+                }
+                photoInputRef.current?.click();
+              }}
               aria-label="Upload profile picture"
               className="relative block rounded-full cursor-pointer focus:outline-none"
             >
@@ -1982,9 +3208,9 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
           <div>
             <div className="flex items-center space-x-2">
               <h2 className="text-xl font-extrabold text-white">
-                {profileName || 'Your Profile'}
+                {authenticatedUser ? profileName || 'Your Profile' : 'Guest Reviewer'}
               </h2>
-              {isPro && (
+              {isPro && authenticatedUser && (
                 <span className="px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[10px] font-bold">
                   PRO
                 </span>
@@ -1998,7 +3224,13 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
             <div className="flex flex-wrap items-center gap-2 mt-1.5">
               <button
                 type="button"
-                onClick={() => photoInputRef.current?.click()}
+                onClick={() => {
+                  if (!authenticatedUser) {
+                    onRequireAuth?.('upload a profile photo');
+                    return;
+                  }
+                  photoInputRef.current?.click();
+                }}
                 className="text-[11px] font-semibold text-[#38BDF8] hover:underline cursor-pointer"
               >
                 {profilePhotoUrl ? 'Change photo' : 'Upload real photo'}
@@ -2131,7 +3363,13 @@ export const SecondaryViews: React.FC<SecondaryViewsProps> = ({
           <div className="flex items-center justify-end pt-3 border-t border-slate-800/80">
             <button
               type="button"
-              onClick={() => onToast('Profile settings saved.')}
+              onClick={() => {
+                if (!authenticatedUser) {
+                  onRequireAuth?.('save profile settings');
+                  return;
+                }
+                onToast('Profile settings saved.');
+              }}
               className="px-5 py-2 rounded-xl btn-royal text-white text-xs font-bold flex items-center space-x-1.5 cursor-pointer"
             >
               <Check className="w-3.5 h-3.5" />
