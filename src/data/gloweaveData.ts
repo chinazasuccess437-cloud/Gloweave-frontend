@@ -1,4 +1,6 @@
 import {
+  CommentReactionEmoji,
+  CommentReportReason,
   ContributorItem,
   MatchItem,
   MessageThread,
@@ -65,6 +67,7 @@ export const SUBMISSION_RESOURCE_TYPES = [
   'Technical Documentation',
   'Product / Service Website',
   'Startup',
+  'Forum',
   'Other Resource',
 ] as const;
 
@@ -78,6 +81,8 @@ export const ALL_RESOURCE_FILTER_TYPES = [
   'Product',
   'Research',
   'Website',
+  'Forum',
+  'Community Discussion',
   'Other Resource',
 ] as const;
 
@@ -91,6 +96,35 @@ export const VERIFICATION_STATUSES = [
 ] as const;
 
 export const IMPACT_SEVERITY_LEVELS = ['Low', 'Medium', 'High', 'Critical'] as const;
+
+export const ALLOWED_COMMENT_REACTIONS: readonly CommentReactionEmoji[] = [
+  '👍',
+  '💡',
+  '🔍',
+  '🤝',
+  '⚠️',
+  '🚀',
+] as const;
+
+export const COMMENT_REACTION_METADATA: Record<CommentReactionEmoji, string> = {
+  '👍': 'Helpful',
+  '💡': 'Insightful',
+  '🔍': 'Needs Evidence',
+  '🤝': 'Collaborate',
+  '⚠️': 'Caution / Risk',
+  '🚀': 'High Potential',
+};
+
+export const COMMENT_REPORT_REASONS: ReadonlyArray<{
+  value: CommentReportReason;
+  label: string;
+}> = [
+  { value: 'spam', label: 'Spam or Self-Promotion' },
+  { value: 'misinformation', label: 'Unsubstantiated or Misleading Claim' },
+  { value: 'harassment', label: 'Harassment or Abusive Language' },
+  { value: 'off-topic', label: 'Off-Topic / Generic Social Chatter' },
+  { value: 'other', label: 'Other Policy Concern' },
+];
 
 export const INITIAL_PROBLEMS: ProblemItem[] = [];
 

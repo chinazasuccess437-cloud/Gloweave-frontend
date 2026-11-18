@@ -93,6 +93,8 @@ export type ResourceKind =
   | 'Product'
   | 'Research'
   | 'Website'
+  | 'Forum'
+  | 'Community Discussion'
   | 'Other Resource';
 
 export type BatchProcessingStatus =
@@ -185,6 +187,9 @@ export interface EvidenceItem {
   sourceUrl?: string;
   documentName?: string;
   sourceTitle: string;
+  publishedAt?: string;
+  extractedPassage?: string;
+  identificationReasoning?: string;
   extractedReferences: string[];
   supportingEvidence: string;
   evidenceType: EvidenceType;
@@ -219,8 +224,19 @@ export interface ProblemItem {
   sourceEvidence: {
     label: string;
     url: string;
-    sourceType: 'Research' | 'Startup' | 'Product' | 'Website' | 'Report' | 'PDF';
+    sourceType:
+      | 'Research'
+      | 'Startup'
+      | 'Product'
+      | 'Website'
+      | 'Report'
+      | 'PDF'
+      | 'Forum'
+      | 'Discussion';
     discoveredAt: string;
+    publishedAt?: string;
+    extractedPassage?: string;
+    identificationReasoning?: string;
   };
   views: string;
   viewsNum: number;
@@ -279,10 +295,15 @@ export interface SolutionItem {
 export type MatchKind = 'startup' | 'product' | 'collaborator' | 'proposed-solution';
 export type MatchVerification = 'ai-suggested' | 'verified';
 export type MatchUserFeedback = 'helpful' | 'needs-evidence' | 'not-relevant';
+export type AiCoverageStatus =
+  | 'fully_addressed'
+  | 'partially_addressed'
+  | 'insufficiently_addressed';
 
 export interface MatchItem {
   id: string;
   problemId: string;
+  startupId?: string;
   kind: MatchKind;
   verification: MatchVerification;
   candidateName: string;
@@ -291,12 +312,18 @@ export interface MatchItem {
   region: Exclude<RegionFilter, 'Global'>;
   country: string;
   rationale: string;
+  coveragePercent?: number;
+  coverageStatus?: AiCoverageStatus;
+  identifiedGaps?: string[];
+  supportingEvidenceSummary?: string;
   sourceUrl?: string;
   supportingEvidenceUrls?: string[];
   contributorId?: string;
   fitLabel: string;
   statusNote: string;
   reviewStatus?: VerificationStatus;
+  matchStartupUpvotes?: number;
+  startupUpvotedByMe?: boolean;
   userFeedback?: MatchUserFeedback | null;
   userFeedbackNote?: string;
   bookmarked?: boolean;
@@ -326,6 +353,96 @@ export interface StartupItem {
   featuredByBackend?: boolean;
   usefulnessScore?: number;
   featuredReason?: string;
+  aggregateUpvotes?: number;
+}
+
+export type CommentTargetType = 'problem' | 'startup' | 'solution' | 'match';
+export type CommentReactionEmoji = '👍' | '💡' | '🔍' | '🤝' | '⚠️' | '🚀';
+export type CommentStatus = 'active' | 'hidden_by_moderator' | 'deleted';
+export type CommentReportReason =
+  | 'spam'
+  | 'harassment'
+  | 'misinformation'
+  | 'off-topic'
+  | 'other';
+
+export interface SanitizedAuthorAttribution {
+  authorId: string;
+  displayName: string;
+  role: string;
+  country?: string;
+  avatarUrl?: string;
+  isPrivateProfile?: boolean;
+}
+
+export interface CommentReactionSummary {
+  emoji: CommentReactionEmoji;
+  count: number;
+  reactedByMe: boolean;
+}
+
+export interface CommentItem {
+  id: string;
+  targetType: CommentTargetType;
+  targetId: string;
+  parentId: string | null;
+  author: SanitizedAuthorAttribution;
+  body: string;
+  upvotesCount: number;
+  upvotedByMe: boolean;
+  reactions: CommentReactionSummary[];
+  repliesCount: number;
+  status: CommentStatus;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export type CommunityFeedActivityType =
+  | 'problem'
+  | 'startup'
+  | 'solution'
+  | 'discussion'
+  | 'verification';
+
+export type CommunityFeedEntityType =
+  | 'problem'
+  | 'startup'
+  | 'solution'
+  | 'match'
+  | 'comment';
+
+export interface CommunityFeedItem {
+  id: string;
+  activityType: CommunityFeedActivityType;
+  entityType: CommunityFeedEntityType;
+  entityId: string;
+  parentEntityId?: string;
+  title: string;
+  excerpt: string;
+  industry?: string;
+  region?: Exclude<RegionFilter, 'Global'>;
+  country?: string;
+  actor: SanitizedAuthorAttribution;
+  engagementCounts?: {
+    upvotes?: number;
+    comments?: number;
+    reactions?: number;
+  };
+  createdAt: string;
+}
+
+export interface CommunityFeedFilterState {
+  activityType: 'all' | CommunityFeedActivityType;
+  industry: string;
+  region: RegionFilter;
+  country: string;
+}
+
+export interface PlatformFootprintStats {
+  activeProblemsCount: number;
+  verifiedSolutionsCount: number;
+  indexedStartupsCount: number;
+  verifiedResearchersCount: number;
 }
 
 export interface ContributorItem {
